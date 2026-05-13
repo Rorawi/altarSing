@@ -64,7 +64,7 @@ export default function SongForm({
 
       {/* Song Title */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
           Song Title <span className="text-red-500">*</span>
         </label>
         <input
@@ -73,13 +73,13 @@ export default function SongForm({
           required
           defaultValue={initialData?.title ?? ''}
           placeholder="e.g. Amazing Grace"
-          className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+          className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
         />
       </div>
 
       {/* YouTube Link */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
           YouTube / Online Link
         </label>
         <input
@@ -87,13 +87,13 @@ export default function SongForm({
           name="youtube_link"
           defaultValue={prefillYoutubeLink ?? initialData?.youtube_link ?? ''}
           placeholder="https://youtube.com/watch?v=..."
-          className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+          className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
         />
       </div>
 
       {/* Categories */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">Categories</label>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Categories</label>
         <div className="flex flex-wrap gap-2">
           {SONG_CATEGORIES.map((cat) => {
             const selected = selectedCategories.includes(cat);
@@ -105,7 +105,7 @@ export default function SongForm({
                 className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                   selected
                     ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
-                    : 'bg-white text-slate-600 border-slate-300 hover:border-violet-400 hover:text-violet-600'
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:border-violet-400 hover:text-violet-600'
                 }`}
               >
                 {cat}
@@ -119,22 +119,22 @@ export default function SongForm({
             value={otherText}
             onChange={(e) => setOtherText(e.target.value)}
             placeholder="Describe the category…"
-            className="mt-2 w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+            className="mt-2 w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
           />
         )}
         {selectedCategories.length === 0 && (
-          <p className="text-xs text-slate-400 mt-1.5">Tap to select one or more categories</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">Tap to select one or more categories</p>
         )}
       </div>
 
       {/* Key & Tempo */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">Musical Key</label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Musical Key</label>
           <select
             name="musical_key"
             defaultValue={initialData?.musical_key ?? ''}
-            className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+            className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
           >
             <option value="">— Select key —</option>
             {MUSICAL_KEYS.map((key) => (
@@ -146,11 +146,11 @@ export default function SongForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">Tempo / Feel</label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Tempo / Feel</label>
           <select
             name="tempo"
             defaultValue={initialData?.tempo ?? ''}
-            className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+            className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
           >
             <option value="">— Select —</option>
             {TEMPOS.map((tempo) => (
@@ -165,13 +165,13 @@ export default function SongForm({
       {/* Rehearsal Status (edit only) */}
       {initialData?.id && (
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
             Rehearsal Status
           </label>
           <select
             name="rehearsal_status"
             defaultValue={initialData.rehearsal_status ?? 'none'}
-            className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+            className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
           >
             <option value="none">Not in rehearsal</option>
             <option value="rehearsing">Currently Rehearsing</option>
@@ -182,7 +182,7 @@ export default function SongForm({
 
       {/* Notes */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
           Notes{' '}
           <span className="text-slate-400 font-normal text-xs">
             (rehearsal instructions, arrangement notes, etc.)
@@ -193,7 +193,7 @@ export default function SongForm({
           defaultValue={initialData?.notes ?? ''}
           rows={4}
           placeholder="Add rehearsal instructions, arrangement notes, or special instructions..."
-          className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
+          className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
         />
       </div>
 
@@ -202,7 +202,7 @@ export default function SongForm({
         <button
           type="button"
           onClick={() => router.back()}
-          className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-3 text-sm font-medium hover:bg-slate-50 transition-colors"
+          className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl py-3 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
         >
           Cancel
         </button>

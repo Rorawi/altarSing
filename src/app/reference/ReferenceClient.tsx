@@ -25,8 +25,8 @@ export default function ReferenceClient({ songs }: { songs: SongRef[] }) {
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-4 no-print">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Quick Reference</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Quick Reference</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
             {filtered.length} song{filtered.length !== 1 ? 's' : ''}
             {filterCategory ? ` in ${filterCategory}` : ''}
           </p>
@@ -47,7 +47,7 @@ export default function ReferenceClient({ songs }: { songs: SongRef[] }) {
           className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-medium border transition-colors ${
             !filterCategory
               ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
-              : 'bg-white text-slate-600 border-slate-200 hover:border-violet-300'
+              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-violet-300'
           }`}
         >
           All Songs
@@ -59,7 +59,7 @@ export default function ReferenceClient({ songs }: { songs: SongRef[] }) {
             className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
               filterCategory === cat
                 ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
-                : 'bg-white text-slate-600 border-slate-200 hover:border-violet-300'
+                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-violet-300'
             }`}
           >
             {cat}
@@ -88,7 +88,7 @@ export default function ReferenceClient({ songs }: { songs: SongRef[] }) {
       {filtered.length === 0 ? (
         <div className="text-center py-20">
           <p className="text-5xl mb-4">📋</p>
-          <p className="text-slate-500 font-medium text-lg">No songs in this category</p>
+          <p className="text-slate-500 dark:text-slate-400 font-medium text-lg">No songs in this category</p>
           <button
             onClick={() => setFilterCategory('')}
             className="mt-3 text-sm text-violet-600 hover:underline"
@@ -97,23 +97,23 @@ export default function ReferenceClient({ songs }: { songs: SongRef[] }) {
           </button>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-          <div className="divide-y divide-slate-100">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
+          <div className="divide-y divide-slate-100 dark:divide-slate-700">
             {filtered.map((song, i) => (
               <div
                 key={song.id}
                 className={`flex items-center gap-3 px-4 py-3.5 ${
-                  i % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'
+                  i % 2 === 0 ? 'bg-white dark:bg-slate-800' : 'bg-slate-50/60 dark:bg-slate-700/40'
                 }`}
               >
                 {/* Row number */}
-                <span className="text-xs text-slate-300 w-5 text-right shrink-0 font-mono">
+                <span className="text-xs text-slate-300 dark:text-slate-600 w-5 text-right shrink-0 font-mono">
                   {i + 1}
                 </span>
 
                 {/* Title & categories */}
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm text-slate-900 leading-tight">{song.title}</p>
+                  <p className="font-medium text-sm text-slate-900 dark:text-slate-100 leading-tight">{song.title}</p>
                   <div className="flex flex-wrap gap-1 mt-0.5">
                     {song.categories.map((cat) => (
                       <span
@@ -134,7 +134,7 @@ export default function ReferenceClient({ songs }: { songs: SongRef[] }) {
                     </span>
                   )}
                   {song.tempo && (
-                    <span className="text-xs text-slate-400 hidden sm:block">{song.tempo}</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500 hidden sm:block">{song.tempo}</span>
                   )}
                   {song.youtube_link && (
                     <a

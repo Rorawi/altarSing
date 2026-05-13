@@ -125,13 +125,13 @@ export default function AttendanceClient({ members, sessionDate }: Props) {
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Attendance</h1>
-          <p className="text-xs text-slate-500 mt-0.5">{formattedDate}</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Attendance</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{formattedDate}</p>
         </div>
         <div className="flex gap-2">
           <Link
             href="/attendance/report"
-            className="border border-slate-300 text-slate-600 px-3 py-2 rounded-xl text-xs font-medium hover:bg-slate-50 transition-colors"
+            className="border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 px-3 py-2 rounded-xl text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
             📊 Report
           </Link>
@@ -149,23 +149,23 @@ export default function AttendanceClient({ members, sessionDate }: Props) {
         type="date"
         value={sessionDate}
         onChange={handleDateChange}
-        className="mb-3 w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white text-slate-700"
+        className="mb-3 w-full border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
       />
 
       {/* Stats bar */}
       {members.length > 0 && (
         <div className="flex gap-2 mb-4">
-          <div className="flex-1 bg-green-50 rounded-xl px-3 py-2 text-center border border-green-100">
-            <p className="text-xl font-bold text-green-700">{presentCount}</p>
-            <p className="text-xs text-green-600">Present</p>
+          <div className="flex-1 bg-green-50 dark:bg-green-900/30 rounded-xl px-3 py-2 text-center border border-green-100 dark:border-green-800">
+            <p className="text-xl font-bold text-green-700 dark:text-green-400">{presentCount}</p>
+            <p className="text-xs text-green-600 dark:text-green-500">Present</p>
           </div>
-          <div className="flex-1 bg-red-50 rounded-xl px-3 py-2 text-center border border-red-100">
-            <p className="text-xl font-bold text-red-600">{absentCount}</p>
-            <p className="text-xs text-red-500">Absent</p>
+          <div className="flex-1 bg-red-50 dark:bg-red-900/30 rounded-xl px-3 py-2 text-center border border-red-100 dark:border-red-800">
+            <p className="text-xl font-bold text-red-600 dark:text-red-400">{absentCount}</p>
+            <p className="text-xs text-red-500 dark:text-red-400">Absent</p>
           </div>
-          <div className="flex-1 bg-slate-50 rounded-xl px-3 py-2 text-center border border-slate-200">
-            <p className="text-xl font-bold text-slate-500">{unmarkedCount}</p>
-            <p className="text-xs text-slate-400">Unmarked</p>
+          <div className="flex-1 bg-slate-50 dark:bg-slate-800 rounded-xl px-3 py-2 text-center border border-slate-200 dark:border-slate-700">
+            <p className="text-xl font-bold text-slate-500 dark:text-slate-400">{unmarkedCount}</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">Unmarked</p>
           </div>
         </div>
       )}
@@ -174,9 +174,9 @@ export default function AttendanceClient({ members, sessionDate }: Props) {
       {showAddMember && (
         <form
           onSubmit={handleAddMember}
-          className="bg-violet-50 border border-violet-200 rounded-2xl p-4 mb-4 space-y-3"
+          className="bg-violet-50 dark:bg-violet-900/30 border border-violet-200 dark:border-violet-700 rounded-2xl p-4 mb-4 space-y-3"
         >
-          <p className="text-sm font-semibold text-violet-800">New Choir / Band Member</p>
+          <p className="text-sm font-semibold text-violet-800 dark:text-violet-300">New Choir / Band Member</p>
           {addError && (
             <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               {addError}
@@ -188,12 +188,12 @@ export default function AttendanceClient({ members, sessionDate }: Props) {
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             required
-            className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+            className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
           />
           <select
             value={newRole}
             onChange={(e) => setNewRole(e.target.value)}
-            className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white text-slate-700"
+            className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
           >
             <option value="">Role / Instrument (optional)</option>
             {MEMBER_ROLES.map((r) => (
@@ -205,13 +205,13 @@ export default function AttendanceClient({ members, sessionDate }: Props) {
             placeholder="Photo URL (optional)"
             value={newImageUrl}
             onChange={(e) => setNewImageUrl(e.target.value)}
-            className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+            className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
           />
           <div className="flex gap-2">
             <button
               type="button"
               onClick={() => setShowAddMember(false)}
-              className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-2.5 text-sm font-medium hover:bg-slate-50"
+              className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700"
             >
               Cancel
             </button>
@@ -230,7 +230,7 @@ export default function AttendanceClient({ members, sessionDate }: Props) {
       {members.length === 0 && !showAddMember && (
         <div className="text-center py-20">
           <p className="text-5xl mb-4">🎤</p>
-          <p className="text-slate-500 font-medium text-lg">No choir members yet</p>
+          <p className="text-slate-500 dark:text-slate-400 font-medium text-lg">No choir members yet</p>
           <button
             onClick={() => setShowAddMember(true)}
             className="mt-4 bg-violet-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors"
@@ -240,134 +240,119 @@ export default function AttendanceClient({ members, sessionDate }: Props) {
         </div>
       )}
 
-      {/* Member cards */}
-      <div className="space-y-3">
-        {members.map((member) => {
-          const present = member.attendance?.present;
-          const absReason = (member.attendance as any)?.absence_reason as string | null | undefined;
-          const isMarkingAbsent = markingAbsentId === member.id;
-          const isConfirmingDelete = confirmDeleteId === member.id;
-          const avatarColor = getAvatarColor(member.name);
+      {/* Member cards — horizontal swipe carousel */}
+      {members.length > 0 && (
+        <div
+          className="flex gap-3 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-3"
+          style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
+        >
+          {members.map((member, index) => {
+            const present = member.attendance?.present;
+            const absReason = (member.attendance as any)?.absence_reason as string | null | undefined;
+            const isMarkingAbsent = markingAbsentId === member.id;
+            const isConfirmingDelete = confirmDeleteId === member.id;
+            const avatarColor = getAvatarColor(member.name);
 
-          let accentColor = 'bg-slate-300';
-          let borderColor = 'border-slate-200';
-          if (present === true) { accentColor = 'bg-green-400'; borderColor = 'border-green-200'; }
-          if (present === false) { accentColor = 'bg-red-400'; borderColor = 'border-red-200'; }
+            let topBg = 'bg-slate-50 dark:bg-slate-700';
+            let borderColor = 'border-slate-200 dark:border-slate-600';
+            if (present === true) { topBg = 'bg-green-50 dark:bg-green-900/30'; borderColor = 'border-green-200 dark:border-green-700'; }
+            if (present === false) { topBg = 'bg-red-50 dark:bg-red-900/30'; borderColor = 'border-red-200 dark:border-red-700'; }
 
-          return (
-            <div
-              key={member.id}
-              className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-opacity ${isPending ? 'opacity-60 pointer-events-none' : ''} ${borderColor}`}
-            >
-              <div className="flex">
-                {/* Left accent stripe */}
-                <div className={`w-1.5 shrink-0 ${accentColor}`} />
-
-                <div className="flex-1 p-3">
-                  <div className="flex items-center gap-3">
-                    {/* Avatar — tappable, goes to history */}
-                    <Link href={`/attendance/${member.id}`} className="shrink-0">
-                      <div className="w-13 h-13 w-[52px] h-[52px] rounded-full overflow-hidden shadow-sm">
-                        {member.image_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={member.image_url}
-                            alt={member.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className={`w-full h-full ${avatarColor} flex items-center justify-center`}>
-                            <span className="text-white font-bold text-sm">{getInitials(member.name)}</span>
-                          </div>
-                        )}
+            return (
+              <div
+                key={member.id}
+                className={`shrink-0 snap-center w-[78vw] max-w-[300px] bg-white dark:bg-slate-800 rounded-2xl border shadow-md overflow-hidden flex flex-col transition-opacity ${isPending ? 'opacity-60 pointer-events-none' : ''} ${borderColor}`}
+              >
+                {/* Card top — avatar + info */}
+                <div className={`${topBg} px-4 pt-4 pb-5 flex flex-col items-center`}>
+                  {/* Counter + delete row */}
+                  <div className="w-full flex items-center justify-between mb-3">
+                    <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">{index + 1} / {members.length}</span>
+                    {isConfirmingDelete ? (
+                      <div className="flex gap-3">
+                        <button onClick={() => setConfirmDeleteId(null)} className="text-xs text-slate-500">Cancel</button>
+                        <button onClick={() => handleDelete(member.id)} className="text-xs text-red-600 font-semibold">Remove</button>
                       </div>
-                    </Link>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <Link href={`/attendance/${member.id}`}>
-                        <p className="font-bold text-slate-900 text-sm leading-tight hover:text-violet-700 transition-colors">
-                          {member.name}
-                        </p>
-                      </Link>
-                      {member.role && (
-                        <p className="text-xs text-slate-500 mt-0.5">{member.role}</p>
-                      )}
-                      <div className="mt-1.5">
-                        {present === true && (
-                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
-                            ✓ Present
-                          </span>
-                        )}
-                        {present === false && (
-                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">
-                            ✗ Absent{absReason ? ` · ${absReason}` : ''}
-                          </span>
-                        )}
-                        {(present === null || present === undefined) && (
-                          <span className="text-xs text-slate-400">Not marked</span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Right actions */}
-                    <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      {present !== true ? (
-                        <button
-                          onClick={() => handleMarkPresent(member.id)}
-                          className="px-3 py-1.5 bg-green-50 border border-green-200 text-green-700 rounded-xl text-xs font-semibold hover:bg-green-100 transition-colors"
-                        >
-                          ✓ Present
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => startMarkingAbsent(member.id, absReason ?? null)}
-                          className="px-3 py-1.5 bg-red-50 border border-red-200 text-red-600 rounded-xl text-xs font-semibold hover:bg-red-100 transition-colors"
-                        >
-                          ✗ Absent
-                        </button>
-                      )}
-                      {present === false && !isMarkingAbsent && (
-                        <button
-                          onClick={() => startMarkingAbsent(member.id, absReason ?? null)}
-                          className="text-xs text-slate-400 hover:text-violet-600 transition-colors"
-                        >
-                          Edit reason
-                        </button>
-                      )}
-                      {isConfirmingDelete ? (
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => setConfirmDeleteId(null)}
-                            className="text-xs text-slate-400 hover:text-slate-600"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={() => handleDelete(member.id)}
-                            className="text-xs text-red-600 font-semibold hover:text-red-800"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setConfirmDeleteId(member.id)}
-                          className="text-slate-300 hover:text-red-400 transition-colors"
-                          title="Remove member"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDeleteId(member.id)}
+                        className="text-slate-300 hover:text-red-400 transition-colors p-1"
+                        title="Remove member"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
                   </div>
 
-                  {/* Absence reason picker — inline expansion */}
-                  {isMarkingAbsent && (
-                    <div className="mt-3 pt-3 border-t border-slate-100 space-y-2.5">
-                      <p className="text-xs font-semibold text-slate-600">Reason for absence:</p>
+                  {/* Avatar */}
+                  <Link href={`/attendance/${member.id}`}>
+                    <div className="w-24 h-24 rounded-full overflow-hidden shadow-md">
+                      {member.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={member.image_url} alt={member.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className={`w-full h-full ${avatarColor} flex items-center justify-center`}>
+                          <span className="text-white font-bold text-3xl">{getInitials(member.name)}</span>
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+
+                  <Link href={`/attendance/${member.id}`} className="mt-3 text-center">
+                    <p className="font-bold text-slate-900 dark:text-slate-100 text-base leading-tight">{member.name}</p>
+                  </Link>
+                  {member.role && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{member.role}</p>
+                  )}
+
+                  {/* Status badge */}
+                  <div className="mt-2.5">
+                    {present === true && (
+                      <span className="inline-flex items-center gap-1 text-sm font-semibold text-green-700 bg-green-200 px-3 py-1 rounded-full">
+                        ✓ Present
+                      </span>
+                    )}
+                    {present === false && (
+                      <span className="inline-flex items-center gap-1 text-sm font-semibold text-red-600 bg-red-200 px-3 py-1 rounded-full">
+                        ✗ Absent{absReason ? ` · ${absReason}` : ''}
+                      </span>
+                    )}
+                    {(present === null || present === undefined) && (
+                      <span className="text-sm text-slate-400">Not marked</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Card bottom — action buttons */}
+                <div className="px-4 py-4 flex-1 space-y-3">
+                  {!isMarkingAbsent ? (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleMarkPresent(member.id)}
+                        className={`flex-1 py-3.5 rounded-xl text-sm font-bold border-2 transition-colors ${
+                          present === true
+                            ? 'bg-green-600 text-white border-green-600'
+                            : 'bg-white dark:bg-slate-700 text-green-700 dark:text-green-400 border-green-300 dark:border-green-700 hover:bg-green-50 dark:hover:bg-green-900/20'
+                        }`}
+                      >
+                        ✓ Present
+                      </button>
+                      <button
+                        onClick={() => startMarkingAbsent(member.id, absReason ?? null)}
+                        className={`flex-1 py-3.5 rounded-xl text-sm font-bold border-2 transition-colors ${
+                          present === false
+                            ? 'bg-red-600 text-white border-red-600'
+                            : 'bg-white dark:bg-slate-700 text-red-600 dark:text-red-400 border-red-300 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/20'
+                        }`}
+                      >
+                        ✗ Absent
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Reason for absence:</p>
                       <div className="flex flex-wrap gap-2">
                         {ABSENCE_REASONS.map((reason) => (
                           <button
@@ -377,7 +362,7 @@ export default function AttendanceClient({ members, sessionDate }: Props) {
                             className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                               selectedReason === reason
                                 ? 'bg-red-600 text-white border-red-600'
-                                : 'bg-white text-slate-600 border-slate-300 hover:border-red-300 hover:text-red-600'
+                                : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:border-red-300'
                             }`}
                           >
                             {reason}
@@ -390,33 +375,32 @@ export default function AttendanceClient({ members, sessionDate }: Props) {
                           placeholder="Describe reason…"
                           value={reasonText}
                           onChange={(e) => setReasonText(e.target.value)}
-                          autoFocus
-                          className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-red-300"
+                          className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300"
                         />
                       )}
-                      <div className="flex gap-2 pt-0.5">
+                      <div className="flex gap-2">
                         <button
                           onClick={() => { setMarkingAbsentId(null); setSelectedReason(''); setReasonText(''); }}
-                          className="flex-1 border border-slate-300 text-slate-600 rounded-xl py-2 text-xs font-medium hover:bg-slate-50"
+                          className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-xl py-2.5 text-sm font-medium dark:hover:bg-slate-700"
                         >
                           Cancel
                         </button>
                         <button
                           onClick={() => handleConfirmAbsent(member.id)}
                           disabled={isPending}
-                          className="flex-1 bg-red-600 text-white rounded-xl py-2 text-xs font-semibold hover:bg-red-700 disabled:opacity-60"
+                          className="flex-1 bg-red-600 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-red-700 disabled:opacity-60"
                         >
-                          {isPending ? 'Saving…' : 'Confirm Absent'}
+                          {isPending ? 'Saving…' : 'Confirm'}
                         </button>
                       </div>
                     </div>
                   )}
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

@@ -49,8 +49,8 @@ export default function SongLibraryClient({ initialSongs }: { initialSongs: Song
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Song Library</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Song Library</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
             {initialSongs.length} song{initialSongs.length !== 1 ? 's' : ''}
             {hasFilters ? ` · ${filtered.length} shown` : ''}
           </p>
@@ -71,7 +71,7 @@ export default function SongLibraryClient({ initialSongs }: { initialSongs: Song
           placeholder="Search songs or notes…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white"
+          className="w-full pl-9 pr-4 py-2.5 border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
         />
         {search && (
           <button
@@ -88,7 +88,7 @@ export default function SongLibraryClient({ initialSongs }: { initialSongs: Song
         <select
           value={filterCategory}
           onChange={(e) => setFilterCategory(e.target.value)}
-          className="shrink-0 border border-slate-200 rounded-xl px-3 py-2 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 text-slate-600"
+          className="shrink-0 border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-violet-400 text-slate-600"
         >
           <option value="">All Categories</option>
           {SONG_CATEGORIES.map((c) => (
@@ -101,7 +101,7 @@ export default function SongLibraryClient({ initialSongs }: { initialSongs: Song
         <select
           value={filterKey}
           onChange={(e) => setFilterKey(e.target.value)}
-          className="shrink-0 border border-slate-200 rounded-xl px-3 py-2 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 text-slate-600"
+          className="shrink-0 border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-violet-400 text-slate-600"
         >
           <option value="">All Keys</option>
           {MUSICAL_KEYS.map((k) => (
@@ -114,7 +114,7 @@ export default function SongLibraryClient({ initialSongs }: { initialSongs: Song
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as SortOption)}
-          className="shrink-0 border border-slate-200 rounded-xl px-3 py-2 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 text-slate-600"
+          className="shrink-0 border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-violet-400 text-slate-600"
         >
           <option value="date_desc">Newest First</option>
           <option value="date_asc">Oldest First</option>
@@ -140,7 +140,7 @@ export default function SongLibraryClient({ initialSongs }: { initialSongs: Song
       {filtered.length === 0 ? (
         <div className="text-center py-20">
           <p className="text-5xl mb-4">🎵</p>
-          <p className="text-slate-500 font-medium text-lg">
+          <p className="text-slate-500 dark:text-slate-400 font-medium text-lg">
             {initialSongs.length === 0 ? 'Your library is empty' : 'No songs match your filters'}
           </p>
           {initialSongs.length === 0 ? (
@@ -151,7 +151,7 @@ export default function SongLibraryClient({ initialSongs }: { initialSongs: Song
               >
                 Add your first song
               </Link>
-              <p className="text-sm text-slate-400">or use</p>
+              <p className="text-sm text-slate-400 dark:text-slate-500">or use</p>
               <Link href="/quick-add" className="inline-block text-violet-600 text-sm hover:underline">
                 ⚡ Quick Add — paste a YouTube link
               </Link>

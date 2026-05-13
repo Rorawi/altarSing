@@ -56,7 +56,7 @@ export default function NewLogEntryClient({ songs }: { songs: SongOption[] }) {
       <div className="flex items-center gap-3 mb-6">
         <button
           onClick={() => router.back()}
-          className="text-slate-400 hover:text-slate-600 transition-colors p-1 -ml-1"
+          className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-1 -ml-1"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -68,14 +68,14 @@ export default function NewLogEntryClient({ songs }: { songs: SongOption[] }) {
           </svg>
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Log Service Entry</h1>
-          <p className="text-sm text-slate-500">Record a song from a service</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Log Service Entry</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Record a song from a service</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
         {error && (
-          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+          <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl text-sm">
             {error}
           </div>
         )}
@@ -83,14 +83,14 @@ export default function NewLogEntryClient({ songs }: { songs: SongOption[] }) {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Link to library song */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               Link to Library Song{' '}
               <span className="text-slate-400 font-normal text-xs">(optional)</span>
             </label>
             <select
               value={selectedSongId}
               onChange={(e) => handleSongSelect(e.target.value)}
-              className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+              className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
             >
               <option value="">— Not in library / type manually below —</option>
               {songs.map((s) => (
@@ -105,7 +105,7 @@ export default function NewLogEntryClient({ songs }: { songs: SongOption[] }) {
 
           {/* Song Title */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               Song Title <span className="text-red-500">*</span>
             </label>
             <input
@@ -115,14 +115,14 @@ export default function NewLogEntryClient({ songs }: { songs: SongOption[] }) {
               value={songTitle}
               onChange={(e) => setSongTitle(e.target.value)}
               placeholder="e.g. How Great Thou Art"
-              className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
             />
           </div>
 
           {/* Date & Key */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                 Service Date <span className="text-red-500">*</span>
               </label>
               <input
@@ -130,19 +130,19 @@ export default function NewLogEntryClient({ songs }: { songs: SongOption[] }) {
                 name="service_date"
                 required
                 defaultValue={today}
-                className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                 Musical Key
               </label>
               <select
                 name="musical_key"
                 value={autoKey}
                 onChange={(e) => setAutoKey(e.target.value)}
-                className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+                className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
               >
                 <option value="">— Key —</option>
                 {MUSICAL_KEYS.map((k) => (
@@ -156,13 +156,13 @@ export default function NewLogEntryClient({ songs }: { songs: SongOption[] }) {
 
           {/* Service Moment */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               Service Moment <span className="text-red-500">*</span>
             </label>
             <select
               name="service_moment"
               required
-              className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+              className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
             >
               <option value="">— Select when this was sung —</option>
               {SERVICE_MOMENTS.map((m) => (
@@ -175,25 +175,25 @@ export default function NewLogEntryClient({ songs }: { songs: SongOption[] }) {
 
           {/* Lead Singer */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               Lead Singer / Song Leader
             </label>
             <input
               type="text"
               name="lead_singer"
               placeholder="e.g. Sister Abena"
-              className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
             />
           </div>
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Notes</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Notes</label>
             <textarea
               name="notes"
               rows={3}
               placeholder="Any notes about the performance…"
-              className="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
+              className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
             />
           </div>
 
@@ -202,7 +202,7 @@ export default function NewLogEntryClient({ songs }: { songs: SongOption[] }) {
             <button
               type="button"
               onClick={() => router.back()}
-              className="flex-1 border border-slate-300 text-slate-700 rounded-xl py-3 text-sm font-medium hover:bg-slate-50"
+              className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl py-3 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700"
             >
               Cancel
             </button>

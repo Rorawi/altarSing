@@ -16,7 +16,7 @@ export default function Navigation({ variant }: { variant: 'bottom' | 'side' }) 
 
   if (variant === 'bottom') {
     return (
-      <nav className="flex-shrink-0 z-50 bg-white border-t border-slate-200">
+      <nav className="flex-shrink-0 z-50 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
         <ul className="flex">
           {navItems.map((item) => {
             const isActive = pathname.startsWith(item.href);
@@ -25,11 +25,11 @@ export default function Navigation({ variant }: { variant: 'bottom' | 'side' }) 
                 <Link
                   href={item.href}
                   className={`flex flex-col items-center justify-center py-2 px-1 gap-0.5 transition-colors ${
-                    isActive ? 'text-violet-700' : 'text-slate-400 hover:text-slate-600'
+                    isActive ? 'text-violet-600 dark:text-violet-400' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
                   }`}
                 >
                   <span className="text-xl leading-none">{item.icon}</span>
-                  <span className={`text-[10px] font-medium ${isActive ? 'text-violet-700' : ''}`}>
+                  <span className={`text-[10px] font-medium ${isActive ? 'text-violet-600 dark:text-violet-400' : ''}`}>
                     {item.label}
                   </span>
                 </Link>

@@ -56,8 +56,8 @@ export default function LogClient({ initialLogs }: { initialLogs: ServiceLog[] }
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Service Log</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Service Log</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
             {initialLogs.length} entr{initialLogs.length !== 1 ? 'ies' : 'y'}
             {hasFilters ? ` · ${filtered.length} shown` : ''}
           </p>
@@ -75,8 +75,8 @@ export default function LogClient({ initialLogs }: { initialLogs: ServiceLog[] }
         onClick={() => setShowFilters(!showFilters)}
         className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium mb-3 border transition-colors ${
           showFilters || hasFilters
-            ? 'bg-violet-50 border-violet-200 text-violet-700'
-            : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+            ? 'bg-violet-50 dark:bg-violet-900/30 border-violet-200 dark:border-violet-700 text-violet-700 dark:text-violet-300'
+            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'
         }`}
       >
         <span className="flex items-center gap-2">
@@ -90,13 +90,13 @@ export default function LogClient({ initialLogs }: { initialLogs: ServiceLog[] }
 
       {/* Filters panel */}
       {showFilters && (
-        <div className="bg-white border border-slate-200 rounded-xl p-4 mb-4 space-y-3">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 mb-4 space-y-3">
           <input
             type="text"
             placeholder="Search by song title…"
             value={filterTitle}
             onChange={(e) => setFilterTitle(e.target.value)}
-            className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+            className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
           />
 
           <div className="grid grid-cols-2 gap-2">
@@ -105,12 +105,12 @@ export default function LogClient({ initialLogs }: { initialLogs: ServiceLog[] }
               placeholder="Lead singer…"
               value={filterSinger}
               onChange={(e) => setFilterSinger(e.target.value)}
-              className="border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+              className="border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
             />
             <select
               value={filterMoment}
               onChange={(e) => setFilterMoment(e.target.value)}
-              className="border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 text-slate-600"
+              className="border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 text-slate-600"
             >
               <option value="">All moments</option>
               {SERVICE_MOMENTS.map((m) => (
@@ -123,21 +123,21 @@ export default function LogClient({ initialLogs }: { initialLogs: ServiceLog[] }
 
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-xs text-slate-500 mb-1">From date</label>
+              <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">From date</label>
               <input
                 type="date"
                 value={filterDateFrom}
                 onChange={(e) => setFilterDateFrom(e.target.value)}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
               />
             </div>
             <div>
-              <label className="block text-xs text-slate-500 mb-1">To date</label>
+              <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">To date</label>
               <input
                 type="date"
                 value={filterDateTo}
                 onChange={(e) => setFilterDateTo(e.target.value)}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
               />
             </div>
           </div>
@@ -177,7 +177,7 @@ export default function LogClient({ initialLogs }: { initialLogs: ServiceLog[] }
         <div className="space-y-5">
           {sortedDates.map((date) => (
             <div key={date}>
-              <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">
+              <h2 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 px-1">
                 {new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
                   weekday: 'long',
                   year: 'numeric',

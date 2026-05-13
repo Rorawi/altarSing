@@ -35,12 +35,12 @@ export default function SongCard({ song }: { song: Song }) {
 
   return (
     <div
-      className={`bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden transition-opacity ${isPending ? 'opacity-60 pointer-events-none' : ''}`}
+      className={`bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden transition-opacity ${isPending ? 'opacity-60 pointer-events-none' : ''}`}
     >
       <div className="p-4">
         {/* Header row */}
         <div className="flex items-start justify-between gap-2 mb-2">
-          <h3 className="font-semibold text-slate-900 text-base leading-snug flex-1 min-w-0">
+          <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-base leading-snug flex-1 min-w-0">
             {song.title}
           </h3>
           <Link
@@ -62,7 +62,7 @@ export default function SongCard({ song }: { song: Song }) {
             </span>
           )}
           {song.tempo && (
-            <span className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-lg">
+            <span className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs px-2 py-0.5 rounded-lg">
               {song.tempo}
             </span>
           )}
@@ -78,7 +78,7 @@ export default function SongCard({ song }: { song: Song }) {
 
         {/* Notes preview */}
         {song.notes && (
-          <p className="text-xs text-slate-500 line-clamp-2 mb-3 leading-relaxed">{song.notes}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-3 leading-relaxed">{song.notes}</p>
         )}
 
         {/* YouTube link */}
@@ -94,7 +94,7 @@ export default function SongCard({ song }: { song: Song }) {
         )}
 
         {/* Rehearsal status row */}
-        <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
+        <div className="flex items-center gap-2 pt-3 border-t border-slate-100 dark:border-slate-700">
           <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusColor}`}>
             {statusLabel}
           </span>
@@ -132,10 +132,10 @@ export default function SongCard({ song }: { song: Song }) {
 
       {/* Delete area */}
       {showDeleteConfirm ? (
-        <div className="px-4 pb-4 flex gap-2 border-t border-slate-100 pt-3">
+        <div className="px-4 pb-4 flex gap-2 border-t border-slate-100 dark:border-slate-700 pt-3">
           <button
             onClick={() => setShowDeleteConfirm(false)}
-            className="flex-1 text-xs border border-slate-300 rounded-xl py-2 text-slate-600 hover:bg-slate-50"
+            className="flex-1 text-xs border border-slate-300 dark:border-slate-600 rounded-xl py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
           >
             Cancel
           </button>
@@ -148,10 +148,10 @@ export default function SongCard({ song }: { song: Song }) {
           </button>
         </div>
       ) : (
-        <div className="px-4 pb-3 border-t border-slate-50 pt-2 flex justify-end">
+        <div className="px-4 pb-3 border-t border-slate-50 dark:border-slate-700 pt-2 flex justify-end">
           <button
             onClick={() => setShowDeleteConfirm(true)}
-            className="text-xs text-slate-300 hover:text-red-400 transition-colors"
+            className="text-xs text-slate-300 dark:text-slate-600 hover:text-red-400 dark:hover:text-red-400 transition-colors"
           >
             Delete
           </button>

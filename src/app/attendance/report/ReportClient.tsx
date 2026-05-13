@@ -69,7 +69,7 @@ export default function ReportClient() {
       {/* Back */}
       <button
         onClick={() => router.back()}
-        className="flex items-center gap-2 text-slate-500 hover:text-slate-700 transition-colors mb-5 -ml-1"
+        className="flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors mb-5 -ml-1"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -77,19 +77,19 @@ export default function ReportClient() {
         <span className="text-sm font-medium">Attendance</span>
       </button>
 
-      <h1 className="text-2xl font-bold text-slate-900 mb-1">Attendance Report</h1>
-      <p className="text-sm text-slate-500 mb-4">{formattedDate}</p>
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-1">Attendance Report</h1>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{formattedDate}</p>
 
       {/* Date picker */}
       <input
         type="date"
         value={selectedDate}
         onChange={(e) => setSelectedDate(e.target.value)}
-        className="mb-4 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white text-slate-700"
+        className="mb-4 w-full border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
       />
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg text-sm mb-4">
           <p className="font-semibold">Error loading report</p>
           <p className="text-xs font-mono mt-1">{error}</p>
         </div>
@@ -108,17 +108,17 @@ export default function ReportClient() {
         <>
           {/* Summary stats */}
           <div className="grid grid-cols-3 gap-2 mb-5">
-            <div className="bg-green-50 border border-green-100 rounded-xl p-3 text-center">
-              <p className="text-2xl font-bold text-green-700">{presentMembers.length}</p>
-              <p className="text-xs text-green-600">Present</p>
+            <div className="bg-green-50 dark:bg-green-900/30 border border-green-100 dark:border-green-800 rounded-xl p-3 text-center">
+              <p className="text-2xl font-bold text-green-700 dark:text-green-400">{presentMembers.length}</p>
+              <p className="text-xs text-green-600 dark:text-green-500">Present</p>
             </div>
-            <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-center">
-              <p className="text-2xl font-bold text-red-600">{absentMembers.length}</p>
-              <p className="text-xs text-red-500">Absent</p>
+            <div className="bg-red-50 dark:bg-red-900/30 border border-red-100 dark:border-red-800 rounded-xl p-3 text-center">
+              <p className="text-2xl font-bold text-red-600 dark:text-red-400">{absentMembers.length}</p>
+              <p className="text-xs text-red-500 dark:text-red-400">Absent</p>
             </div>
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
-              <p className="text-2xl font-bold text-slate-500">{unmarkedMembers.length}</p>
-              <p className="text-xs text-slate-400">Unmarked</p>
+            <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-center">
+              <p className="text-2xl font-bold text-slate-500 dark:text-slate-400">{unmarkedMembers.length}</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500">Unmarked</p>
             </div>
           </div>
 
@@ -160,9 +160,9 @@ function Section({
   title: string; count: number; color: 'green' | 'red' | 'gray'; children: React.ReactNode;
 }) {
   const colors = {
-    green: 'text-green-700 bg-green-100',
-    red: 'text-red-600 bg-red-100',
-    gray: 'text-slate-500 bg-slate-100',
+    green: 'text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-900/30',
+    red: 'text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/30',
+    gray: 'text-slate-500 bg-slate-100 dark:text-slate-400 dark:bg-slate-700',
   };
   return (
     <div className="mb-5">
@@ -182,7 +182,7 @@ function MemberRow({ member, showReason }: { member: MemberWithStatus; showReaso
   const present = member.attendance?.present;
 
   return (
-    <div className={`flex items-center gap-3 bg-white rounded-xl border px-3 py-2.5 ${present === true ? 'border-green-200' : present === false ? 'border-red-200' : 'border-slate-200'}`}>
+    <div className={`flex items-center gap-3 bg-white dark:bg-slate-800 rounded-xl border px-3 py-2.5 ${present === true ? 'border-green-200 dark:border-green-700' : present === false ? 'border-red-200 dark:border-red-700' : 'border-slate-200 dark:border-slate-700'}`}>
       <div className="w-9 h-9 rounded-full overflow-hidden shrink-0">
         {member.image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -194,10 +194,10 @@ function MemberRow({ member, showReason }: { member: MemberWithStatus; showReaso
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-slate-800 truncate">{member.name}</p>
-        {member.role && <p className="text-xs text-slate-400 truncate">{member.role}</p>}
+        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{member.name}</p>
+        {member.role && <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{member.role}</p>}
         {showReason && absenceReason && (
-          <p className="text-xs text-red-500 mt-0.5">{absenceReason}</p>
+          <p className="text-xs text-red-500 dark:text-red-400 mt-0.5">{absenceReason}</p>
         )}
       </div>
     </div>
