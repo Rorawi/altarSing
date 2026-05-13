@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  nav,
+  header {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    font-size: 12pt;
+  }
+}
