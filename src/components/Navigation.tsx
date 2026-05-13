@@ -4,11 +4,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const navItems = [
-  { href: '/library',   label: 'Library',   icon: '🎵' },
-  { href: '/quick-add', label: 'Quick Add', icon: '⚡' },
-  { href: '/rehearsal', label: 'Rehearsal', icon: '🎼' },
-  { href: '/log',       label: 'Log',       icon: '📅' },
-  { href: '/reference', label: 'Reference', icon: '📋' },
+  { href: '/library',    label: 'Library',    icon: '🎵' },
+  { href: '/quick-add',  label: 'Quick Add',  icon: '⚡' },
+  { href: '/rehearsal',  label: 'Rehearsal',  icon: '🎼' },
+  { href: '/attendance', label: 'Attendance', icon: '✅' },
+  { href: '/log',        label: 'Log',        icon: '📅' },
 ];
 
 export default function Navigation({ variant }: { variant: 'bottom' | 'side' }) {

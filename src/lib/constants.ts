@@ -27,6 +27,21 @@ export const SERVICE_MOMENTS = [
   'Other',
 ] as const;
 
+export const ABSENCE_REASONS = ['Sick', 'Travelling', 'No Notice', 'Other'] as const;
+
+export const MEMBER_ROLES = [
+  'Choir Director',
+  'Vocalist (Lead)',
+  'Vocalist (Backing)',
+  'Keyboardist',
+  'Drummer',
+  'Bassist',
+  'Guitarist',
+  'Saxophonist',
+  'Trumpeter',
+  'Other',
+] as const;
+
 export const REHEARSAL_STATUS_LABELS: Record<string, string> = {
   none: 'Not in rehearsal',
   rehearsing: 'Currently Rehearsing',

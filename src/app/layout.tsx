@@ -8,6 +8,16 @@ const geist = Geist({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'AltarSing',
   description: 'Music Director Song Organizer — track, log, and organize church songs',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'AltarSing',
+  },
+  icons: {
+    icon: '/icons/icon-192.png',
+    apple: '/icons/icon-192.png',
+  },
 };
 
 export const viewport: Viewport = {

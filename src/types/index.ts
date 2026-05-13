@@ -25,4 +25,26 @@ export interface ServiceLog {
   songs?: { title: string } | null;
 }
 
+export interface ChoirMember {
+  id: string;
+  name: string;
+  image_url: string | null;
+  role: string | null;
+  created_at: string;
+}
+
+export interface AttendanceRecord {
+  id: string;
+  member_id: string;
+  session_date: string;
+  present: boolean;
+  absence_reason: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface MemberWithAttendance extends ChoirMember {
+  attendance: AttendanceRecord | null;
+}
+
 export type SortOption = 'date_desc' | 'date_asc' | 'title_asc' | 'title_desc';

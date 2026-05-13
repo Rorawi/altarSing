@@ -92,3 +92,41 @@ export async function deleteServiceLog(id: string) {
   if (error) throw new Error(error.message);
   revalidatePath('/log');
 }
+
+// ─── CHOIR MEMBERS ────────────────────────────────────────────────────────────
+
+export async function addChoirMember(formData: FormData) {
+  const supabase = await createClient();
+  const { error } = await supabase.from('choir_members').insert({
+    name: (formData.get('name') as string).trim(),
+    role: (formData.get('role') as string)?.trim() || null,
+    image_url: (formData.get('image_url') as string)?.trim() || null,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath('/attendance');
+}
+
+export async function deleteChoirMember(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from('choir_members').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/attendance');
+}
+
+// ─── ATTENDANCE ───────────────────────────────────────────────────────────────
+
+export async function upsertAttendance(
+  memberId: string,
+  sessionDate: string,
+  present: boolean,
+  absenceReason: string | null,
+  notes: string | null,
+) {
+  const supabase = await createClient();
+  const { error } = await supabase.from('attendance').upsert(
+    { member_id: memberId, session_date: sessionDate, present, absence_reason: absenceReason || null, notes: notes || null },
+    { onConflict: 'member_id,session_date' },
+  );
+  if (error) throw new Error(error.message);
+  revalidatePath('/attendance');
+}
