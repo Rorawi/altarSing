@@ -24,11 +24,11 @@ export default function Navigation({ variant }: { variant: 'bottom' | 'side' }) 
               <li key={item.href} className="flex-1">
                 <Link
                   href={item.href}
-                  className={`flex flex-col items-center justify-center py-2 px-1 gap-0.5 transition-colors ${
+                  className={`flex flex-col items-center justify-center py-3 px-1 gap-1 transition-colors ${
                     isActive ? 'text-violet-600 dark:text-violet-400' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
                   }`}
                 >
-                  <span className="text-xl leading-none">{item.icon}</span>
+                  <span className="text-4xl leading-none">{item.icon}</span>
                   <span className={`text-[10px] font-medium ${isActive ? 'text-violet-600 dark:text-violet-400' : ''}`}>
                     {item.label}
                   </span>

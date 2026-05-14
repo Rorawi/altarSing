@@ -33,21 +33,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className={`${geist.className} bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100`}>
         <ThemeProvider>
-        {/* Fixed-width app shell — max 430px, centered on wide screens */}
-        <div className="relative mx-auto h-screen w-full max-w-[430px] bg-white dark:bg-slate-900 shadow-xl flex flex-col overflow-hidden">
-          {/* Mobile header */}
-          <header className="flex-shrink-0 z-40 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center gap-2 shadow-sm no-print">
+        <div className="mx-auto w-full max-w-[430px] min-h-screen bg-white dark:bg-slate-900 shadow-xl">
+          {/* Fixed header */}
+          <header className="fixed top-0 left-0 right-0 max-w-[430px] mx-auto z-50 h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 px-4 flex items-center gap-2 shadow-sm no-print">
             <span className="text-xl">🎶</span>
             <h1 className="font-bold text-violet-700 dark:text-violet-400 text-lg flex-1">AltarSing</h1>
             <ThemeToggle />
           </header>
 
-          <main className="flex-1 px-4 py-5 overflow-y-auto">
+          <main className="px-4 pt-16 pb-32">
             {children}
           </main>
 
-          {/* Bottom nav — always visible inside the fixed-width shell */}
-          <div className="no-print" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+          {/* Fixed bottom nav */}
+          <div className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto z-50 no-print bg-white dark:bg-slate-900" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
             <Navigation variant="bottom" />
           </div>
         </div>
