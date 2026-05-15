@@ -10,6 +10,7 @@ interface SongEntry {
   songId: string;
   title: string;
   key: string;
+  tags: string[];
 }
 
 interface SongOption {
@@ -23,14 +24,23 @@ export default function NewLogEntryClient({ songs }: { songs: SongOption[] }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [songEntries, setSongEntries] = useState<SongEntry[]>([
-    { uid: crypto.randomUUID(), songId: '', title: '', key: '' },
+    { uid: crypto.randomUUID(), songId: '', title: '', key: '', tags: [] },
   ]);
   const [leaders, setLeaders] = useState<string[]>(['']);
   const today = new Date().toISOString().split('T')[0];
 
   function addSong() {
     if (songEntries.length >= 4) return;
-    setSongEntries((prev) => [...prev, { uid: crypto.randomUUID(), songId: '', title: '', key: '' }]);
+    setSongEntries((prev) => [...prev, { uid: crypto.randomUUID(), songId: '', title: '', key: '', tags: [] }]);
+  }
+  function toggleSongTag(uid: string, tag: string) {
+    setSongEntries((prev) =>
+      prev.map((s) =>
+        s.uid !== uid
+          ? s
+          : { ...s, tags: s.tags.includes(tag) ? s.tags.filter((t) => t !== tag) : [...s.tags, tag] },
+      ),
+    );
   }
   function removeSong(uid: string) {
     setSongEntries((prev) => prev.filter((s) => s.uid !== uid));
@@ -60,7 +70,7 @@ export default function NewLogEntryClient({ songs }: { songs: SongOption[] }) {
     const notes = (form.elements.namedItem('notes') as HTMLTextAreaElement).value;
     const validSongs = songEntries
       .filter((s) => s.title.trim())
-      .map((s) => ({ title: s.title.trim(), key: s.key || null, song_id: s.songId || null }));
+      .map((s) => ({ title: s.title.trim(), key: s.key || null, song_id: s.songId || null, tags: s.tags }));
     if (validSongs.length === 0) { setError('Please enter at least one song title.'); return; }
     startTransition(async () => {
       try {
@@ -147,6 +157,26 @@ export default function NewLogEntryClient({ songs }: { songs: SongOption[] }) {
                       <option value="">Key</option>
                       {MUSICAL_KEYS.map((k) => <option key={k} value={k}>{k}</option>)}
                     </select>
+                  </div>
+                  {/* Per-song tags */}
+                  <div className="pl-7">
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-1">Tags</p>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {SERVICE_MOMENTS.map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => toggleSongTag(entry.uid, tag)}
+                          className={`text-[10px] px-2 py-0.5 rounded-full font-medium transition-colors ${
+                            entry.tags.includes(tag)
+                              ? 'bg-violet-600 text-white'
+                              : 'bg-slate-100 dark:bg-slate-600 text-slate-500 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-500'
+                          }`}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               ))}

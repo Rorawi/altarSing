@@ -12,7 +12,7 @@ export default function LogClient({ initialLogs }: { initialLogs: ServiceLog[] }
   const router = useRouter();
   const [filterTitle, setFilterTitle] = useState('');
   const [filterSinger, setFilterSinger] = useState('');
-  const [filterMoment, setFilterMoment] = useState('');
+  const [filterTags, setFilterTags] = useState<string[]>([]);
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -25,17 +25,32 @@ export default function LogClient({ initialLogs }: { initialLogs: ServiceLog[] }
     let list = [...normalLogs];
     if (filterTitle.trim()) {
       const q = filterTitle.toLowerCase();
-      list = list.filter((l) => l.song_title.toLowerCase().includes(q));
+      list = list.filter((l) =>
+        l.song_title.toLowerCase().includes(q) ||
+        l.songs.some((s) => s.title.toLowerCase().includes(q)),
+      );
     }
     if (filterSinger.trim()) {
       const q = filterSinger.toLowerCase();
-      list = list.filter((l) => l.lead_singer?.toLowerCase().includes(q));
+      list = list.filter(
+        (l) =>
+          l.lead_singer?.toLowerCase().includes(q) ||
+          l.lead_singers.some((s) => s.toLowerCase().includes(q)),
+      );
     }
-    if (filterMoment) list = list.filter((l) => l.service_moment === filterMoment);
+    if (filterTags.length > 0) {
+      list = list.filter((l) => {
+        // Backward compat: check log-level service_moment
+        if (filterTags.includes(l.service_moment)) return true;
+        // Check per-song tags
+        const songTags = l.songs.flatMap((s) => s.tags ?? []);
+        return filterTags.some((t) => songTags.includes(t));
+      });
+    }
     if (filterDateFrom) list = list.filter((l) => l.service_date >= filterDateFrom);
     if (filterDateTo) list = list.filter((l) => l.service_date <= filterDateTo);
     return list;
-  }, [normalLogs, filterTitle, filterSinger, filterMoment, filterDateFrom, filterDateTo]);
+  }, [normalLogs, filterTitle, filterSinger, filterTags, filterDateFrom, filterDateTo]);
 
   // Group entries by service date
   const grouped = useMemo(() => {
@@ -48,11 +63,11 @@ export default function LogClient({ initialLogs }: { initialLogs: ServiceLog[] }
   }, [filtered]);
 
   const sortedDates = Array.from(grouped.keys()).sort((a, b) => b.localeCompare(a));
-  const hasFilters = filterTitle || filterSinger || filterMoment || filterDateFrom || filterDateTo;
+  const hasFilters = filterTitle || filterSinger || filterTags.length > 0 || filterDateFrom || filterDateTo;
   function clearFilters() {
     setFilterTitle('');
     setFilterSinger('');
-    setFilterMoment('');
+    setFilterTags([]);
     setFilterDateFrom('');
     setFilterDateTo('');
   }
@@ -66,6 +81,7 @@ export default function LogClient({ initialLogs }: { initialLogs: ServiceLog[] }
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
             {normalLogs.length} entr{normalLogs.length !== 1 ? 'ies' : 'y'}
             {hasFilters ? ` · ${filtered.length} shown` : ''}
+            {filterTags.length > 0 ? ` (${filterTags.join(', ')})` : ''}
             {pendingReviews.length > 0 ? ` · ${pendingReviews.length} awaiting review` : ''}
           </p>
         </div>
@@ -85,19 +101,33 @@ export default function LogClient({ initialLogs }: { initialLogs: ServiceLog[] }
         </div>
       )}
 
-      {/* Moment tabs */}
+      {/* Tag filter tabs — multi-select */}
       <div className="flex gap-2 overflow-x-auto pb-1 mb-4 scrollbar-none">
-        {(['', ...SERVICE_MOMENTS] as const).map((m) => (
+        <button
+          onClick={() => setFilterTags([])}
+          className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+            filterTags.length === 0
+              ? 'bg-violet-600 text-white shadow-sm'
+              : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-violet-300'
+          }`}
+        >
+          All
+        </button>
+        {SERVICE_MOMENTS.map((m) => (
           <button
-            key={m || 'all'}
-            onClick={() => setFilterMoment(m)}
+            key={m}
+            onClick={() =>
+              setFilterTags((prev) =>
+                prev.includes(m) ? prev.filter((t) => t !== m) : [...prev, m],
+              )
+            }
             className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-              filterMoment === m
+              filterTags.includes(m)
                 ? 'bg-violet-600 text-white shadow-sm'
                 : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-violet-300'
             }`}
           >
-            {m || 'All'}
+            {m}
           </button>
         ))}
       </div>

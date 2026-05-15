@@ -16,6 +16,7 @@ export interface LogSong {
   title: string;
   key: string | null;
   song_id: string | null;
+  tags?: string[];
   performed?: boolean;
 }
 

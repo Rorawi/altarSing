@@ -33,21 +33,35 @@ export default function LogEntryCard({ log }: { log: ServiceLog }) {
           </span>
 
           {/* Songs list */}
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {displaySongs.map((song, i) => (
-              <div key={i} className="flex items-center gap-2">
-                {displaySongs.length > 1 && (
-                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium w-4 shrink-0">
-                    {i + 1}.
-                  </span>
-                )}
-                <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm leading-snug flex-1 min-w-0 truncate">
-                  {song.title}
-                </p>
-                {song.key && (
-                  <span className="bg-violet-600 text-white text-xs font-bold px-2 py-0.5 rounded-lg shrink-0">
-                    {song.key}
-                  </span>
+              <div key={i}>
+                <div className="flex items-center gap-2">
+                  {displaySongs.length > 1 && (
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium w-4 shrink-0">
+                      {i + 1}.
+                    </span>
+                  )}
+                  <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm leading-snug flex-1 min-w-0 truncate">
+                    {song.title}
+                  </p>
+                  {song.key && (
+                    <span className="bg-violet-600 text-white text-xs font-bold px-2 py-0.5 rounded-lg shrink-0">
+                      {song.key}
+                    </span>
+                  )}
+                </div>
+                {song.tags && song.tags.length > 0 && (
+                  <div className={`flex gap-1 flex-wrap mt-1 ${displaySongs.length > 1 ? 'pl-6' : ''}`}>
+                    {song.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="text-[9px] px-1.5 py-0.5 rounded-full bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 font-medium"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
                 )}
               </div>
             ))}
