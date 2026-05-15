@@ -55,12 +55,20 @@ export default function SongLibraryClient({ initialSongs }: { initialSongs: Song
             {hasFilters ? ` · ${filtered.length} shown` : ''}
           </p>
         </div>
-        <Link
-          href="/library/new"
-          className="bg-violet-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors flex items-center gap-1.5 shadow-sm"
-        >
-          + Add Song
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/quick-add"
+            className="border border-violet-300 dark:border-violet-600 text-violet-600 dark:text-violet-400 px-3 py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors flex items-center gap-1 shadow-sm"
+          >
+            ⚡ Quick Add
+          </Link>
+          <Link
+            href="/library/new"
+            className="bg-violet-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors flex items-center gap-1.5 shadow-sm"
+          >
+            + Add
+          </Link>
+        </div>
       </div>
 
       {/* Search */}
@@ -146,14 +154,26 @@ export default function SongLibraryClient({ initialSongs }: { initialSongs: Song
           {initialSongs.length === 0 ? (
             <div className="mt-4 space-y-3">
               <Link
-                href="/library/new"
-                className="inline-block bg-violet-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors"
+                href="/quick-add"
+                className="inline-flex items-center gap-2 bg-violet-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors"
               >
-                Add your first song
+                ⚡ Quick Add a song
               </Link>
-              <p className="text-sm text-slate-400 dark:text-slate-500">or use</p>
-              <Link href="/quick-add" className="inline-block text-violet-600 text-sm hover:underline">
-                ⚡ Quick Add — paste a YouTube link
+              <p className="text-sm text-slate-400 dark:text-slate-500">or</p>
+              <Link href="/library/new" className="inline-block text-violet-600 dark:text-violet-400 text-sm hover:underline">
+                Fill in details manually
+              </Link>
+            </div>
+          ) : search ? (
+            <div className="mt-4 space-y-3">
+              <p className="text-sm text-slate-400 dark:text-slate-500">
+                Not in your library yet?
+              </p>
+              <Link
+                href="/quick-add"
+                className="inline-flex items-center gap-2 bg-violet-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors"
+              >
+                ⚡ Quick Add it
               </Link>
             </div>
           ) : (

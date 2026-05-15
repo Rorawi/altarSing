@@ -48,6 +48,7 @@ CREATE POLICY "Allow all on service_logs"
 CREATE TABLE IF NOT EXISTS choir_members (
   id          UUID  DEFAULT gen_random_uuid() PRIMARY KEY,
   name        TEXT  NOT NULL,
+  role        TEXT,
   image_url   TEXT,
   created_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
@@ -59,12 +60,13 @@ CREATE POLICY "Allow all on choir_members"
 -- Attendance Records Table
 -- One record per member per session date
 CREATE TABLE IF NOT EXISTS attendance (
-  id          UUID  DEFAULT gen_random_uuid() PRIMARY KEY,
-  member_id   UUID  NOT NULL REFERENCES choir_members(id) ON DELETE CASCADE,
-  session_date DATE NOT NULL,
-  present     BOOLEAN NOT NULL DEFAULT false,
-  notes       TEXT,
-  created_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  id              UUID  DEFAULT gen_random_uuid() PRIMARY KEY,
+  member_id       UUID  NOT NULL REFERENCES choir_members(id) ON DELETE CASCADE,
+  session_date    DATE  NOT NULL,
+  present         BOOLEAN NOT NULL DEFAULT false,
+  absence_reason  TEXT,
+  notes           TEXT,
+  created_at      TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   UNIQUE (member_id, session_date)
 );
 
