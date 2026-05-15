@@ -70,6 +70,23 @@ export default function LogClient({ initialLogs }: { initialLogs: ServiceLog[] }
         </Link>
       </div>
 
+      {/* Moment tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-1 mb-4 scrollbar-none">
+        {(['', ...SERVICE_MOMENTS] as const).map((m) => (
+          <button
+            key={m || 'all'}
+            onClick={() => setFilterMoment(m)}
+            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              filterMoment === m
+                ? 'bg-violet-600 text-white shadow-sm'
+                : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-violet-300'
+            }`}
+          >
+            {m || 'All'}
+          </button>
+        ))}
+      </div>
+
       {/* Filter toggle */}
       <button
         onClick={() => setShowFilters(!showFilters)}
@@ -99,27 +116,13 @@ export default function LogClient({ initialLogs }: { initialLogs: ServiceLog[] }
             className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
           />
 
-          <div className="grid grid-cols-2 gap-2">
-            <input
-              type="text"
-              placeholder="Lead singer…"
-              value={filterSinger}
-              onChange={(e) => setFilterSinger(e.target.value)}
-              className="border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
-            />
-            <select
-              value={filterMoment}
-              onChange={(e) => setFilterMoment(e.target.value)}
-              className="border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 text-slate-600"
-            >
-              <option value="">All moments</option>
-              {SERVICE_MOMENTS.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </div>
+          <input
+            type="text"
+            placeholder="Lead singer…"
+            value={filterSinger}
+            onChange={(e) => setFilterSinger(e.target.value)}
+            className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+          />
 
           <div className="grid grid-cols-2 gap-2">
             <div>

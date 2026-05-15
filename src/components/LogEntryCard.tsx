@@ -1,6 +1,6 @@
 'use client';
 
-import type { ServiceLog } from '@/types';
+import type { ServiceLog, LogSong } from '@/types';
 
 export default function LogEntryCard({ log }: { log: ServiceLog }) {
   const formattedDate = new Date(log.service_date + 'T00:00:00').toLocaleDateString('en-US', {
@@ -10,27 +10,54 @@ export default function LogEntryCard({ log }: { log: ServiceLog }) {
     year: 'numeric',
   });
 
+  // Support both new multi-song format and legacy single-song entries
+  const displaySongs: LogSong[] =
+    log.songs && log.songs.length > 0
+      ? log.songs
+      : [{ title: log.song_title, key: log.musical_key, song_id: log.song_id }];
+
+  const displayLeaders: string[] =
+    log.lead_singers && log.lead_singers.length > 0
+      ? log.lead_singers
+      : log.lead_singer
+        ? [log.lead_singer]
+        : [];
+
   return (
     <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{log.song_title}</h3>
+          {/* Service moment badge */}
+          <span className="inline-block bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs px-2 py-0.5 rounded-lg mb-2">
+            {log.service_moment}
+          </span>
 
-          <div className="flex flex-wrap gap-1.5 mt-1.5">
-            {log.musical_key && (
-              <span className="bg-violet-600 text-white text-xs font-bold px-2 py-0.5 rounded-lg">
-                {log.musical_key}
-              </span>
-            )}
-            <span className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs px-2 py-0.5 rounded-lg">
-              {log.service_moment}
-            </span>
+          {/* Songs list */}
+          <div className="space-y-1.5">
+            {displaySongs.map((song, i) => (
+              <div key={i} className="flex items-center gap-2">
+                {displaySongs.length > 1 && (
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium w-4 shrink-0">
+                    {i + 1}.
+                  </span>
+                )}
+                <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm leading-snug flex-1 min-w-0 truncate">
+                  {song.title}
+                </p>
+                {song.key && (
+                  <span className="bg-violet-600 text-white text-xs font-bold px-2 py-0.5 rounded-lg shrink-0">
+                    {song.key}
+                  </span>
+                )}
+              </div>
+            ))}
           </div>
 
-          {log.lead_singer && (
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+          {/* Leaders */}
+          {displayLeaders.length > 0 && (
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
               <span className="mr-1">👤</span>
-              {log.lead_singer}
+              {displayLeaders.join(', ')}
             </p>
           )}
 

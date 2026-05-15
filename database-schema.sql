@@ -74,10 +74,57 @@ ALTER TABLE attendance ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow all on attendance"
   ON attendance FOR ALL USING (true) WITH CHECK (true);
 
+-- Rehearsal Sessions Table
+CREATE TABLE IF NOT EXISTS rehearsal_sessions (
+  id         UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+  date       DATE        NOT NULL,
+  name       TEXT        NOT NULL,
+  notes      TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+ALTER TABLE rehearsal_sessions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all on rehearsal_sessions"
+  ON rehearsal_sessions FOR ALL USING (true) WITH CHECK (true);
+
+-- Rehearsal Songs Table (songs within a session, in order)
+CREATE TABLE IF NOT EXISTS rehearsal_songs (
+  id                UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+  session_id        UUID        NOT NULL REFERENCES rehearsal_sessions(id) ON DELETE CASCADE,
+  position          INTEGER     NOT NULL DEFAULT 1,
+  song_title        TEXT        NOT NULL,
+  song_id           UUID        REFERENCES songs(id) ON DELETE SET NULL,
+  key_used          TEXT,
+  has_modulation    BOOLEAN     NOT NULL DEFAULT false,
+  modulation_from   TEXT,
+  modulation_to     TEXT,
+  harmony_notes     TEXT,
+  arrangement_notes TEXT,
+  run_throughs      INTEGER     NOT NULL DEFAULT 1,
+  created_at        TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+ALTER TABLE rehearsal_songs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all on rehearsal_songs"
+  ON rehearsal_songs FOR ALL USING (true) WITH CHECK (true);
+
+-- Harmony Patterns Table
+CREATE TABLE IF NOT EXISTS harmony_patterns (
+  id          UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+  name        TEXT        NOT NULL,
+  description TEXT        NOT NULL,
+  created_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+ALTER TABLE harmony_patterns ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all on harmony_patterns"
+  ON harmony_patterns FOR ALL USING (true) WITH CHECK (true);
+
 -- =====================================================
 -- Indexes for performance
 -- =====================================================
-CREATE INDEX IF NOT EXISTS idx_choir_members_name    ON choir_members(name);
+CREATE INDEX IF NOT EXISTS idx_rehearsal_sessions_date   ON rehearsal_sessions(date DESC);
+CREATE INDEX IF NOT EXISTS idx_rehearsal_songs_session    ON rehearsal_songs(session_id, position);
 CREATE INDEX IF NOT EXISTS idx_attendance_date        ON attendance(session_date DESC);
 CREATE INDEX IF NOT EXISTS idx_attendance_member      ON attendance(member_id);
 CREATE INDEX IF NOT EXISTS idx_songs_rehearsal_status ON songs(rehearsal_status);

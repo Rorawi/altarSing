@@ -69,17 +69,28 @@ export async function updateRehearsalStatus(id: string, status: string) {
 
 // ─── SERVICE LOGS ─────────────────────────────────────────────────────────────
 
-export async function addServiceLog(formData: FormData) {
+export async function addServiceLog(data: {
+  songs: Array<{ title: string; key: string | null; song_id: string | null }>;
+  lead_singers: string[];
+  service_date: string;
+  service_moment: string;
+  notes: string | null;
+}) {
   const supabase = await createClient();
+  const primary = data.songs[0] ?? { title: '', key: null, song_id: null };
 
   const { error } = await supabase.from('service_logs').insert({
-    song_title: (formData.get('song_title') as string).trim(),
-    song_id: (formData.get('song_id') as string) || null,
-    musical_key: (formData.get('musical_key') as string) || null,
-    lead_singer: (formData.get('lead_singer') as string)?.trim() || null,
-    service_date: formData.get('service_date') as string,
-    service_moment: formData.get('service_moment') as string,
-    notes: (formData.get('notes') as string)?.trim() || null,
+    // Legacy columns (primary song/leader for backward compat)
+    song_title: primary.title,
+    song_id: primary.song_id || null,
+    musical_key: primary.key || null,
+    lead_singer: data.lead_singers[0] || null,
+    // New multi-value columns
+    songs: data.songs,
+    lead_singers: data.lead_singers.filter(Boolean),
+    service_date: data.service_date,
+    service_moment: data.service_moment,
+    notes: data.notes?.trim() || null,
   });
 
   if (error) throw new Error(error.message);
@@ -111,6 +122,85 @@ export async function deleteChoirMember(id: string) {
   const { error } = await supabase.from('choir_members').delete().eq('id', id);
   if (error) throw new Error(error.message);
   revalidatePath('/attendance');
+}
+
+// ─── REHEARSAL SESSIONS ───────────────────────────────────────────────────────
+
+export async function createRehearsalSession(formData: FormData): Promise<string> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('rehearsal_sessions')
+    .insert({
+      date: formData.get('date') as string,
+      name: (formData.get('name') as string).trim(),
+      notes: (formData.get('notes') as string)?.trim() || null,
+    })
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  revalidatePath('/rehearsal');
+  return data.id;
+}
+
+export async function deleteRehearsalSession(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from('rehearsal_sessions').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/rehearsal');
+}
+
+export async function addRehearsalSong(
+  sessionId: string,
+  data: {
+    song_title: string;
+    song_id: string | null;
+    key_used: string | null;
+    has_modulation: boolean;
+    modulation_from: string | null;
+    modulation_to: string | null;
+    harmony_notes: string | null;
+    arrangement_notes: string | null;
+    run_throughs: number;
+  },
+) {
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from('rehearsal_songs')
+    .select('*', { count: 'exact', head: true })
+    .eq('session_id', sessionId);
+  const { error } = await supabase.from('rehearsal_songs').insert({
+    session_id: sessionId,
+    position: (count ?? 0) + 1,
+    ...data,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath(`/rehearsal/${sessionId}`);
+}
+
+export async function deleteRehearsalSong(id: string, sessionId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from('rehearsal_songs').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/rehearsal/${sessionId}`);
+}
+
+// ─── HARMONY PATTERNS ─────────────────────────────────────────────────────────
+
+export async function addHarmonyPattern(formData: FormData) {
+  const supabase = await createClient();
+  const { error } = await supabase.from('harmony_patterns').insert({
+    name: (formData.get('name') as string).trim(),
+    description: (formData.get('description') as string).trim(),
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath('/rehearsal');
+}
+
+export async function deleteHarmonyPattern(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from('harmony_patterns').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/rehearsal');
 }
 
 // ─── ATTENDANCE ───────────────────────────────────────────────────────────────

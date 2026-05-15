@@ -17,10 +17,14 @@ export const MUSICAL_KEYS = [
 export const TEMPOS = ['Slow', 'Moderate', 'Fast'] as const;
 
 export const SERVICE_MOMENTS = [
-  'Church Procession',
-  'Administration',
-  'Music Interlude',
+  'Evangelism',
   'Communion',
+  'Ministration',
+  'Carols',
+  'Wedding',
+  'Funeral',
+  'Music Interlude',
+  'Church Procession',
   'Offertory',
   'After Church',
   'Special Occasion',

@@ -5,6 +5,13 @@ import { useRouter } from 'next/navigation';
 import { SERVICE_MOMENTS, MUSICAL_KEYS } from '@/lib/constants';
 import { addServiceLog } from '@/lib/actions';
 
+interface SongEntry {
+  uid: string;
+  songId: string;
+  title: string;
+  key: string;
+}
+
 interface SongOption {
   id: string;
   title: string;
@@ -15,202 +22,174 @@ export default function NewLogEntryClient({ songs }: { songs: SongOption[] }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [selectedSongId, setSelectedSongId] = useState('');
-  const [songTitle, setSongTitle] = useState('');
-  const [autoKey, setAutoKey] = useState('');
+  const [songEntries, setSongEntries] = useState<SongEntry[]>([
+    { uid: crypto.randomUUID(), songId: '', title: '', key: '' },
+  ]);
+  const [leaders, setLeaders] = useState<string[]>(['']);
+  const today = new Date().toISOString().split('T')[0];
 
-  function handleSongSelect(id: string) {
-    setSelectedSongId(id);
-    if (id) {
-      const song = songs.find((s) => s.id === id);
-      if (song) {
-        setSongTitle(song.title);
-        setAutoKey(song.musical_key ?? '');
-      }
-    } else {
-      setSongTitle('');
-      setAutoKey('');
+  function addSong() {
+    if (songEntries.length >= 4) return;
+    setSongEntries((prev) => [...prev, { uid: crypto.randomUUID(), songId: '', title: '', key: '' }]);
+  }
+  function removeSong(uid: string) {
+    setSongEntries((prev) => prev.filter((s) => s.uid !== uid));
+  }
+  function updateSong(uid: string, field: keyof SongEntry, value: string) {
+    setSongEntries((prev) => prev.map((s) => (s.uid === uid ? { ...s, [field]: value } : s)));
+  }
+  function handleLibrarySelect(uid: string, id: string) {
+    if (!id) { updateSong(uid, 'songId', ''); return; }
+    const found = songs.find((s) => s.id === id);
+    if (found) {
+      setSongEntries((prev) =>
+        prev.map((s) => s.uid === uid ? { ...s, songId: id, title: found.title, key: found.musical_key ?? '' } : s),
+      );
     }
   }
+  function addLeader() { setLeaders((prev) => [...prev, '']); }
+  function removeLeader(i: number) { setLeaders((prev) => prev.filter((_, idx) => idx !== i)); }
+  function updateLeader(i: number, value: string) { setLeaders((prev) => prev.map((v, idx) => (idx === i ? value : v))); }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    const formData = new FormData(e.currentTarget);
-
+    const form = e.currentTarget;
+    const serviceDate = (form.elements.namedItem('service_date') as HTMLInputElement).value;
+    const serviceMoment = (form.elements.namedItem('service_moment') as HTMLSelectElement).value;
+    const notes = (form.elements.namedItem('notes') as HTMLTextAreaElement).value;
+    const validSongs = songEntries
+      .filter((s) => s.title.trim())
+      .map((s) => ({ title: s.title.trim(), key: s.key || null, song_id: s.songId || null }));
+    if (validSongs.length === 0) { setError('Please enter at least one song title.'); return; }
     startTransition(async () => {
       try {
-        await addServiceLog(formData);
+        await addServiceLog({
+          songs: validSongs,
+          lead_singers: leaders.filter((l) => l.trim()),
+          service_date: serviceDate,
+          service_moment: serviceMoment,
+          notes: notes || null,
+        });
         router.push('/log');
         router.refresh();
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+        setError(err instanceof Error ? err.message : 'Something went wrong.');
       }
     });
   }
 
-  const today = new Date().toISOString().split('T')[0];
-
   return (
     <div>
       <div className="flex items-center gap-3 mb-6">
-        <button
-          onClick={() => router.back()}
-          className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-1 -ml-1"
-        >
+        <button onClick={() => router.back()} className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-1 -ml-1">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Log Service Entry</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Record a song from a service</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Record songs from a service</p>
         </div>
       </div>
 
       <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
         {error && (
-          <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl text-sm">
-            {error}
-          </div>
+          <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl text-sm">{error}</div>
         )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Link to library song */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-              Link to Library Song{' '}
-              <span className="text-slate-400 font-normal text-xs">(optional)</span>
-            </label>
-            <select
-              value={selectedSongId}
-              onChange={(e) => handleSongSelect(e.target.value)}
-              className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-            >
-              <option value="">— Not in library / type manually below —</option>
-              {songs.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.title}
-                  {s.musical_key ? ` (${s.musical_key})` : ''}
-                </option>
-              ))}
-            </select>
-            <input type="hidden" name="song_id" value={selectedSongId} />
-          </div>
-
-          {/* Song Title */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-              Song Title <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="song_title"
-              required
-              value={songTitle}
-              onChange={(e) => setSongTitle(e.target.value)}
-              placeholder="e.g. How Great Thou Art"
-              className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-            />
-          </div>
-
-          {/* Date & Key */}
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Date & Moment */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                Service Date <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                name="service_date"
-                required
-                defaultValue={today}
-                className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-              />
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Date <span className="text-red-500">*</span></label>
+              <input type="date" name="service_date" required defaultValue={today}
+                className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" />
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                Musical Key
-              </label>
-              <select
-                name="musical_key"
-                value={autoKey}
-                onChange={(e) => setAutoKey(e.target.value)}
-                className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-              >
-                <option value="">— Key —</option>
-                {MUSICAL_KEYS.map((k) => (
-                  <option key={k} value={k}>
-                    {k}
-                  </option>
-                ))}
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Moment <span className="text-red-500">*</span></label>
+              <select name="service_moment" required
+                className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500">
+                <option value="">— Select —</option>
+                {SERVICE_MOMENTS.map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
             </div>
           </div>
 
-          {/* Service Moment */}
+          {/* Songs */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-              Service Moment <span className="text-red-500">*</span>
-            </label>
-            <select
-              name="service_moment"
-              required
-              className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-            >
-              <option value="">— Select when this was sung —</option>
-              {SERVICE_MOMENTS.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Songs <span className="text-red-500">*</span></label>
+              {songEntries.length < 4 && (
+                <button type="button" onClick={addSong} className="flex items-center gap-1 text-xs text-violet-600 dark:text-violet-400 font-medium hover:text-violet-800 dark:hover:text-violet-200">
+                  <span className="text-base leading-none">+</span> Add song
+                </button>
+              )}
+            </div>
+            <div className="space-y-3">
+              {songEntries.map((entry, i) => (
+                <div key={entry.uid} className="border border-slate-200 dark:border-slate-600 rounded-xl p-3 space-y-2 bg-slate-50 dark:bg-slate-700/40">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 w-5 shrink-0">#{i + 1}</span>
+                    <select value={entry.songId} onChange={(e) => handleLibrarySelect(entry.uid, e.target.value)}
+                      className="flex-1 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-violet-500">
+                      <option value="">From library (optional)…</option>
+                      {songs.map((s) => <option key={s.id} value={s.id}>{s.title}{s.musical_key ? ` (${s.musical_key})` : ''}</option>)}
+                    </select>
+                    {songEntries.length > 1 && (
+                      <button type="button" onClick={() => removeSong(entry.uid)} className="text-slate-300 dark:text-slate-600 hover:text-red-400 transition-colors text-xl leading-none shrink-0">×</button>
+                    )}
+                  </div>
+                  <div className="flex gap-2 pl-7">
+                    <input type="text" value={entry.title} onChange={(e) => updateSong(entry.uid, 'title', e.target.value)} placeholder="Song title…"
+                      className="flex-1 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-500 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" />
+                    <select value={entry.key} onChange={(e) => updateSong(entry.uid, 'key', e.target.value)}
+                      className="w-20 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-violet-500 shrink-0">
+                      <option value="">Key</option>
+                      {MUSICAL_KEYS.map((k) => <option key={k} value={k}>{k}</option>)}
+                    </select>
+                  </div>
+                </div>
               ))}
-            </select>
+            </div>
           </div>
 
-          {/* Lead Singer */}
+          {/* Leaders */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-              Lead Singer / Song Leader
-            </label>
-            <input
-              type="text"
-              name="lead_singer"
-              placeholder="e.g. Sister Abena"
-              className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-            />
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Song Leader(s)</label>
+              <button type="button" onClick={addLeader} className="flex items-center gap-1 text-xs text-violet-600 dark:text-violet-400 font-medium hover:text-violet-800 dark:hover:text-violet-200">
+                <span className="text-base leading-none">+</span> Add leader
+              </button>
+            </div>
+            <div className="space-y-2">
+              {leaders.map((leader, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input type="text" value={leader} onChange={(e) => updateLeader(i, e.target.value)}
+                    placeholder={i === 0 ? 'e.g. Sister Abena' : 'Another leader…'}
+                    className="flex-1 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" />
+                  {leaders.length > 1 && (
+                    <button type="button" onClick={() => removeLeader(i)} className="text-slate-300 dark:text-slate-600 hover:text-red-400 transition-colors text-xl leading-none shrink-0">×</button>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Notes */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Notes</label>
-            <textarea
-              name="notes"
-              rows={3}
-              placeholder="Any notes about the performance…"
-              className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
-            />
+            <textarea name="notes" rows={3} placeholder="Any notes about the service…"
+              className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none" />
           </div>
 
           {/* Actions */}
           <div className="flex gap-3 pt-1">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl py-3 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700"
-            >
+            <button type="button" onClick={() => router.back()}
+              className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl py-3 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700">
               Cancel
             </button>
-            <button
-              type="submit"
-              disabled={isPending}
-              className="flex-1 bg-violet-600 text-white rounded-xl py-3 text-sm font-semibold hover:bg-violet-700 disabled:opacity-60 transition-colors"
-            >
+            <button type="submit" disabled={isPending}
+              className="flex-1 bg-violet-600 text-white rounded-xl py-3 text-sm font-semibold hover:bg-violet-700 disabled:opacity-60 transition-colors">
               {isPending ? 'Saving…' : 'Save Log Entry'}
             </button>
           </div>

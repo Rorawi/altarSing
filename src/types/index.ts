@@ -12,17 +12,26 @@ export interface Song {
   created_at: string;
 }
 
+export interface LogSong {
+  title: string;
+  key: string | null;
+  song_id: string | null;
+}
+
 export interface ServiceLog {
   id: string;
+  // Legacy single-value fields (kept for backward compat display)
   song_title: string;
   song_id: string | null;
   musical_key: string | null;
   lead_singer: string | null;
+  // Multi-value fields (used by new entries)
+  songs: LogSong[];
+  lead_singers: string[];
   service_date: string;
   service_moment: string;
   notes: string | null;
   created_at: string;
-  songs?: { title: string } | null;
 }
 
 export interface ChoirMember {
@@ -48,3 +57,40 @@ export interface MemberWithAttendance extends ChoirMember {
 }
 
 export type SortOption = 'date_desc' | 'date_asc' | 'title_asc' | 'title_desc';
+
+// ─── REHEARSAL SESSIONS ───────────────────────────────────────────────────────
+
+export interface RehearsalSession {
+  id: string;
+  date: string;
+  name: string;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface RehearsalSong {
+  id: string;
+  session_id: string;
+  position: number;
+  song_title: string;
+  song_id: string | null;
+  key_used: string | null;
+  has_modulation: boolean;
+  modulation_from: string | null;
+  modulation_to: string | null;
+  harmony_notes: string | null;
+  arrangement_notes: string | null;
+  run_throughs: number;
+  created_at: string;
+}
+
+export interface HarmonyPattern {
+  id: string;
+  name: string;
+  description: string;
+  created_at: string;
+}
+
+export interface RehearsalSessionWithSongs extends RehearsalSession {
+  rehearsal_songs: Pick<RehearsalSong, 'id' | 'song_title' | 'key_used' | 'position'>[];
+}
