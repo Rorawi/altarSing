@@ -16,6 +16,7 @@ export interface LogSong {
   title: string;
   key: string | null;
   song_id: string | null;
+  performed?: boolean;
 }
 
 export interface ServiceLog {
@@ -31,6 +32,11 @@ export interface ServiceLog {
   service_date: string;
   service_moment: string;
   notes: string | null;
+  // Auto-generation
+  source_session_id: string | null;
+  source_session_name: string | null;
+  is_auto_generated: boolean;
+  reviewed: boolean;
   created_at: string;
 }
 
@@ -65,6 +71,9 @@ export interface RehearsalSession {
   date: string;
   name: string;
   notes: string | null;
+  program_date: string | null;
+  program_converted: boolean;
+  program_log_id: string | null;
   created_at: string;
 }
 

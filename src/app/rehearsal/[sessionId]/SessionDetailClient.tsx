@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { RehearsalSession, RehearsalSong } from '@/types';
-import { addRehearsalSong, deleteRehearsalSong } from '@/lib/actions';
+import { addRehearsalSong, deleteRehearsalSong, updateSessionProgramDate } from '@/lib/actions';
 import { MUSICAL_KEYS } from '@/lib/constants';
 
 type LibrarySong = { id: string; title: string; musical_key: string | null };
@@ -21,6 +21,25 @@ export default function SessionDetailClient({
   const router = useRouter();
   const [showAddForm, setShowAddForm] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [editingProgramDate, setEditingProgramDate] = useState(false);
+  const [programDateInput, setProgramDateInput] = useState(session.program_date ?? '');
+
+  function handleSaveProgramDate() {
+    startTransition(async () => {
+      await updateSessionProgramDate(session.id, programDateInput || null);
+      setEditingProgramDate(false);
+      router.refresh();
+    });
+  }
+
+  function handleClearProgramDate() {
+    setProgramDateInput('');
+    startTransition(async () => {
+      await updateSessionProgramDate(session.id, null);
+      setEditingProgramDate(false);
+      router.refresh();
+    });
+  }
 
   const formattedDate = new Date(session.date + 'T00:00:00').toLocaleDateString('en-US', {
     weekday: 'long',
@@ -67,9 +86,71 @@ export default function SessionDetailClient({
         </div>
       </div>
 
+      {/* Program Date card */}
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 mb-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-0.5">
+              Program Date
+            </p>
+            {session.program_converted ? (
+              <p className="text-sm text-green-600 dark:text-green-400 font-medium">
+                ✓ Auto-logged on{' '}
+                {new Date(session.program_date! + 'T00:00:00').toLocaleDateString('en-US', {
+                  month: 'short', day: 'numeric', year: 'numeric',
+                })}
+              </p>
+            ) : session.program_date ? (
+              <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">
+                📅{' '}
+                {new Date(session.program_date + 'T00:00:00').toLocaleDateString('en-US', {
+                  month: 'short', day: 'numeric', year: 'numeric',
+                })}
+              </p>
+            ) : (
+              <p className="text-sm text-slate-400 dark:text-slate-500">Not scheduled</p>
+            )}
+          </div>
+          {!session.program_converted && (
+            <button
+              onClick={() => setEditingProgramDate((v) => !v)}
+              className="text-xs text-violet-600 dark:text-violet-400 hover:underline shrink-0"
+            >
+              {session.program_date ? 'Change' : 'Set date'}
+            </button>
+          )}
+        </div>
+
+        {editingProgramDate && (
+          <div className="mt-3 flex gap-2 items-center">
+            <input
+              type="date"
+              value={programDateInput}
+              onChange={(e) => setProgramDateInput(e.target.value)}
+              className="flex-1 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+            />
+            <button
+              onClick={handleSaveProgramDate}
+              disabled={isPending}
+              className="bg-violet-600 text-white px-3 py-2 rounded-xl text-sm font-medium hover:bg-violet-700 disabled:opacity-50 shrink-0"
+            >
+              Save
+            </button>
+            {session.program_date && (
+              <button
+                onClick={handleClearProgramDate}
+                disabled={isPending}
+                className="text-xs text-slate-400 hover:text-red-400 transition-colors shrink-0"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Song count summary */}
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-slate-500 dark:text-slate-400">
+      <div className="flex items-center justify-between mb-4">        <p className="text-sm text-slate-500 dark:text-slate-400">
           {songs.length} song{songs.length !== 1 ? 's' : ''} in this session
         </p>
         <button

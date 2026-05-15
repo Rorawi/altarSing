@@ -132,3 +132,35 @@ CREATE INDEX IF NOT EXISTS idx_songs_title             ON songs(title);
 CREATE INDEX IF NOT EXISTS idx_service_logs_date       ON service_logs(service_date DESC);
 CREATE INDEX IF NOT EXISTS idx_service_logs_lead       ON service_logs(lead_singer);
 CREATE INDEX IF NOT EXISTS idx_service_logs_song_id    ON service_logs(song_id);
+
+-- =====================================================
+-- Migration: Program Scheduling & Auto Log Generation
+-- Run this AFTER the initial schema above
+-- =====================================================
+
+-- Multi-song support for service_logs
+ALTER TABLE service_logs ADD COLUMN IF NOT EXISTS songs         JSONB    NOT NULL DEFAULT '[]';
+ALTER TABLE service_logs ADD COLUMN IF NOT EXISTS lead_singers  TEXT[]   NOT NULL DEFAULT '{}';
+
+-- Auto-generation tracking
+ALTER TABLE service_logs ADD COLUMN IF NOT EXISTS source_session_id    UUID;
+ALTER TABLE service_logs ADD COLUMN IF NOT EXISTS source_session_name  TEXT;
+ALTER TABLE service_logs ADD COLUMN IF NOT EXISTS is_auto_generated    BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE service_logs ADD COLUMN IF NOT EXISTS reviewed             BOOLEAN NOT NULL DEFAULT false;
+
+-- Program date scheduling on rehearsal sessions
+ALTER TABLE rehearsal_sessions ADD COLUMN IF NOT EXISTS program_date       DATE;
+ALTER TABLE rehearsal_sessions ADD COLUMN IF NOT EXISTS program_converted  BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE rehearsal_sessions ADD COLUMN IF NOT EXISTS program_log_id     UUID;
+
+-- Migrate existing single-song service_logs into the songs JSONB array
+UPDATE service_logs
+SET
+  songs = json_build_array(
+    json_build_object('title', song_title, 'key', musical_key, 'song_id', song_id::text)
+  ),
+  lead_singers = CASE
+    WHEN lead_singer IS NOT NULL AND lead_singer <> '' THEN ARRAY[lead_singer]
+    ELSE '{}'::TEXT[]
+  END
+WHERE songs = '[]'::jsonb;

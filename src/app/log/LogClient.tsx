@@ -1,12 +1,15 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
-import type { ServiceLog } from '@/types';
+import { useRouter } from 'next/navigation';
+import type { ServiceLog, LogSong } from '@/types';
 import { SERVICE_MOMENTS } from '@/lib/constants';
 import LogEntryCard from '@/components/LogEntryCard';
+import { confirmAutoLog, undoAutoLog } from '@/lib/actions';
 
 export default function LogClient({ initialLogs }: { initialLogs: ServiceLog[] }) {
+  const router = useRouter();
   const [filterTitle, setFilterTitle] = useState('');
   const [filterSinger, setFilterSinger] = useState('');
   const [filterMoment, setFilterMoment] = useState('');
@@ -14,8 +17,12 @@ export default function LogClient({ initialLogs }: { initialLogs: ServiceLog[] }
   const [filterDateTo, setFilterDateTo] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
+  // Separate pending reviews from normal log entries
+  const pendingReviews = initialLogs.filter((l) => l.is_auto_generated && !l.reviewed);
+  const normalLogs = initialLogs.filter((l) => !l.is_auto_generated || l.reviewed);
+
   const filtered = useMemo(() => {
-    let list = [...initialLogs];
+    let list = [...normalLogs];
     if (filterTitle.trim()) {
       const q = filterTitle.toLowerCase();
       list = list.filter((l) => l.song_title.toLowerCase().includes(q));
@@ -28,7 +35,7 @@ export default function LogClient({ initialLogs }: { initialLogs: ServiceLog[] }
     if (filterDateFrom) list = list.filter((l) => l.service_date >= filterDateFrom);
     if (filterDateTo) list = list.filter((l) => l.service_date <= filterDateTo);
     return list;
-  }, [initialLogs, filterTitle, filterSinger, filterMoment, filterDateFrom, filterDateTo]);
+  }, [normalLogs, filterTitle, filterSinger, filterMoment, filterDateFrom, filterDateTo]);
 
   // Group entries by service date
   const grouped = useMemo(() => {
@@ -42,7 +49,6 @@ export default function LogClient({ initialLogs }: { initialLogs: ServiceLog[] }
 
   const sortedDates = Array.from(grouped.keys()).sort((a, b) => b.localeCompare(a));
   const hasFilters = filterTitle || filterSinger || filterMoment || filterDateFrom || filterDateTo;
-
   function clearFilters() {
     setFilterTitle('');
     setFilterSinger('');
@@ -58,8 +64,9 @@ export default function LogClient({ initialLogs }: { initialLogs: ServiceLog[] }
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Service Log</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            {initialLogs.length} entr{initialLogs.length !== 1 ? 'ies' : 'y'}
+            {normalLogs.length} entr{normalLogs.length !== 1 ? 'ies' : 'y'}
             {hasFilters ? ` · ${filtered.length} shown` : ''}
+            {pendingReviews.length > 0 ? ` · ${pendingReviews.length} awaiting review` : ''}
           </p>
         </div>
         <Link
@@ -69,6 +76,14 @@ export default function LogClient({ initialLogs }: { initialLogs: ServiceLog[] }
           + Log Entry
         </Link>
       </div>
+      {/* Pending review banners */}
+      {pendingReviews.length > 0 && (
+        <div className="space-y-3 mb-5">
+          {pendingReviews.map((log) => (
+            <ReviewBanner key={log.id} log={log} onDone={() => router.refresh()} />
+          ))}
+        </div>
+      )}
 
       {/* Moment tabs */}
       <div className="flex gap-2 overflow-x-auto pb-1 mb-4 scrollbar-none">
@@ -161,9 +176,9 @@ export default function LogClient({ initialLogs }: { initialLogs: ServiceLog[] }
         <div className="text-center py-20">
           <p className="text-5xl mb-4">📅</p>
           <p className="text-slate-500 font-medium text-lg">
-            {initialLogs.length === 0 ? 'No service entries yet' : 'No entries match your filters'}
+            {normalLogs.length === 0 ? 'No service entries yet' : 'No entries match your filters'}
           </p>
-          {initialLogs.length === 0 ? (
+          {normalLogs.length === 0 ? (
             <Link
               href="/log/new"
               className="mt-4 inline-block bg-violet-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors"
@@ -197,6 +212,129 @@ export default function LogClient({ initialLogs }: { initialLogs: ServiceLog[] }
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Review Banner ────────────────────────────────────────────────────────────
+
+function ReviewBanner({ log, onDone }: { log: ServiceLog; onDone: () => void }) {
+  const [isPending, startTransition] = useTransition();
+  const [removedIndices, setRemovedIndices] = useState<Set<number>>(new Set());
+  const [expanded, setExpanded] = useState(true);
+
+  function toggleSong(i: number) {
+    setRemovedIndices((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+  }
+
+  function handleConfirm() {
+    startTransition(async () => {
+      await confirmAutoLog(log.id, [...removedIndices]);
+      onDone();
+    });
+  }
+
+  function handleUndo() {
+    if (!log.source_session_id) return;
+    startTransition(async () => {
+      await undoAutoLog(log.id, log.source_session_id!);
+      onDone();
+    });
+  }
+
+  const programDate = new Date(log.service_date + 'T00:00:00').toLocaleDateString('en-US', {
+    month: 'long', day: 'numeric', year: 'numeric',
+  });
+  const keptCount = log.songs.length - removedIndices.size;
+
+  return (
+    <div className="border-2 border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded-2xl overflow-hidden">
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              <span>🎉</span>
+              <p className="font-semibold text-amber-900 dark:text-amber-100 text-sm leading-snug truncate">
+                Auto-logged: {log.source_session_name}
+              </p>
+            </div>
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              {programDate} · {log.songs.length} song{log.songs.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="text-amber-500 dark:text-amber-400 text-xs shrink-0 mt-0.5"
+          >
+            {expanded ? '▲' : '▼'}
+          </button>
+        </div>
+
+        {expanded && (
+          <>
+            <p className="text-xs text-amber-700 dark:text-amber-400 mt-3 mb-2 font-medium">
+              Tap any song you didn&apos;t perform to remove it:
+            </p>
+            <div className="space-y-1.5 mb-4">
+              {(log.songs as LogSong[]).map((song, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => toggleSong(i)}
+                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
+                    removedIndices.has(i)
+                      ? 'bg-red-100 dark:bg-red-900/30 text-red-500 dark:text-red-400'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200'
+                  }`}
+                >
+                  <span className="text-xs font-medium w-4 shrink-0 text-slate-400">{i + 1}.</span>
+                  <span className={`flex-1 text-sm ${removedIndices.has(i) ? 'line-through' : ''}`}>
+                    {song.title}
+                  </span>
+                  {song.key && (
+                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded-md shrink-0 ${
+                      removedIndices.has(i)
+                        ? 'bg-red-200 dark:bg-red-800 text-red-500 dark:text-red-300'
+                        : 'bg-violet-600 text-white'
+                    }`}>
+                      {song.key}
+                    </span>
+                  )}
+                  {removedIndices.has(i) && (
+                    <span className="text-[10px] text-red-400 shrink-0">not performed</span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleUndo}
+                disabled={isPending || !log.source_session_id}
+                className="flex-1 border border-amber-300 dark:border-amber-600 text-amber-700 dark:text-amber-400 rounded-xl py-2.5 text-sm font-medium hover:bg-amber-100 dark:hover:bg-amber-900/30 disabled:opacity-50 transition-colors"
+              >
+                ↩ Undo
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirm}
+                disabled={isPending}
+                className="flex-1 bg-green-600 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
+              >
+                {isPending
+                  ? 'Saving…'
+                  : `✓ Confirm${removedIndices.size > 0 ? ` (${keptCount} song${keptCount !== 1 ? 's' : ''})` : ''}`}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

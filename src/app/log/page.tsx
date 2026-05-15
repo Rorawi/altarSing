@@ -3,9 +3,62 @@ import LogClient from './LogClient';
 
 export default async function LogPage() {
   const supabase = await createClient();
+  const today = new Date().toISOString().split('T')[0];
+
+  // Auto-convert any rehearsal sessions whose program_date has arrived
+  const { data: pendingSessions } = await supabase
+    .from('rehearsal_sessions')
+    .select('*, rehearsal_songs(id, song_title, song_id, key_used, position)')
+    .lte('program_date', today)
+    .eq('program_converted', false)
+    .not('program_date', 'is', null);
+
+  if (pendingSessions && pendingSessions.length > 0) {
+    for (const session of pendingSessions) {
+      const orderedSongs = (session.rehearsal_songs as {
+        id: string; song_title: string; song_id: string | null; key_used: string | null; position: number;
+      }[]).sort((a, b) => a.position - b.position);
+
+      const songs = orderedSongs.map((s) => ({
+        title: s.song_title,
+        key: s.key_used,
+        song_id: s.song_id,
+      }));
+
+      const primary = songs[0] ?? { title: session.name, key: null, song_id: null };
+
+      const { data: newLog } = await supabase
+        .from('service_logs')
+        .insert({
+          song_title: primary.title,
+          song_id: primary.song_id,
+          musical_key: primary.key,
+          lead_singer: null,
+          songs,
+          lead_singers: [],
+          service_date: session.program_date,
+          service_moment: 'Special Occasion',
+          notes: null,
+          source_session_id: session.id,
+          source_session_name: session.name,
+          is_auto_generated: true,
+          reviewed: false,
+        })
+        .select('id')
+        .single();
+
+      if (newLog) {
+        await supabase
+          .from('rehearsal_sessions')
+          .update({ program_converted: true, program_log_id: newLog.id })
+          .eq('id', session.id);
+      }
+    }
+  }
+
   const { data: logs, error } = await supabase
     .from('service_logs')
-    .select('*, songs(title)')
+    .select('*')
     .order('service_date', { ascending: false })
     .order('created_at', { ascending: false });
 
