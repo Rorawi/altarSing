@@ -272,3 +272,46 @@ export async function upsertAttendance(
   if (error) throw new Error(error.message);
   revalidatePath('/attendance');
 }
+
+export async function markAllAbsent(memberIds: string[], sessionDate: string) {
+  const supabase = await createClient();
+  const rows = memberIds.map((memberId) => ({
+    member_id: memberId,
+    session_date: sessionDate,
+    present: false,
+    absence_reason: null,
+    notes: null,
+  }));
+  const { error } = await supabase
+    .from('attendance')
+    .upsert(rows, { onConflict: 'member_id,session_date' });
+  if (error) throw new Error(error.message);
+  revalidatePath('/attendance');
+}
+
+export async function updateRehearsalSong(
+  id: string,
+  sessionId: string,
+  data: {
+    song_title: string;
+    key_used: string | null;
+    run_throughs: number;
+    harmony_notes: string | null;
+    arrangement_notes: string | null;
+  },
+) {
+  const supabase = await createClient();
+  const { error } = await supabase.from('rehearsal_songs').update(data).eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/rehearsal/${sessionId}`);
+}
+
+export async function reorderRehearsalSongs(sessionId: string, orderedIds: string[]) {
+  const supabase = await createClient();
+  await Promise.all(
+    orderedIds.map((id, index) =>
+      supabase.from('rehearsal_songs').update({ position: index + 1 }).eq('id', id),
+    ),
+  );
+  revalidatePath(`/rehearsal/${sessionId}`);
+}

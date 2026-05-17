@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { MemberWithAttendance } from '@/types';
-import { upsertAttendance, addChoirMember, deleteChoirMember } from '@/lib/actions';
+import { upsertAttendance, addChoirMember, deleteChoirMember, markAllAbsent } from '@/lib/actions';
 import { ABSENCE_REASONS, MEMBER_ROLES } from '@/lib/constants';
 
 interface Props {
@@ -116,6 +116,14 @@ export default function AttendanceClient({ members, sessionDate }: Props) {
     });
   }
 
+  function handleMarkAllAbsent() {
+    if (!confirm(`Mark all ${members.length} members as absent for this session?`)) return;
+    startTransition(async () => {
+      await markAllAbsent(members.map((m) => m.id), sessionDate);
+      router.refresh();
+    });
+  }
+
   function handleDateChange(e: React.ChangeEvent<HTMLInputElement>) {
     router.push(`/attendance?date=${e.target.value}`);
   }
@@ -168,6 +176,17 @@ export default function AttendanceClient({ members, sessionDate }: Props) {
             <p className="text-xs text-slate-400 dark:text-slate-500">Unmarked</p>
           </div>
         </div>
+      )}
+
+      {/* Mark all absent */}
+      {members.length > 0 && (
+        <button
+          onClick={handleMarkAllAbsent}
+          disabled={isPending}
+          className="w-full mb-4 border border-red-200 dark:border-red-800 text-red-500 dark:text-red-400 rounded-xl py-2.5 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 transition-colors"
+        >
+          ✗ Mark all absent
+        </button>
       )}
 
       {/* Add member form */}

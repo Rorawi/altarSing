@@ -3,8 +3,30 @@
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import type { RehearsalSession, RehearsalSong } from '@/types';
-import { addRehearsalSong, deleteRehearsalSong, updateSessionProgramDate } from '@/lib/actions';
+import {
+  addRehearsalSong,
+  deleteRehearsalSong,
+  updateRehearsalSong,
+  reorderRehearsalSongs,
+  updateSessionProgramDate,
+} from '@/lib/actions';
 import { MUSICAL_KEYS } from '@/lib/constants';
 
 type LibrarySong = { id: string; title: string; musical_key: string | null };
@@ -23,6 +45,27 @@ export default function SessionDetailClient({
   const [isPending, startTransition] = useTransition();
   const [editingProgramDate, setEditingProgramDate] = useState(false);
   const [programDateInput, setProgramDateInput] = useState(session.program_date ?? '');
+
+  // Local sorted order for optimistic drag-and-drop
+  const [sortedSongs, setSortedSongs] = useState<RehearsalSong[]>(songs);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = sortedSongs.findIndex((s) => s.id === active.id);
+    const newIndex = sortedSongs.findIndex((s) => s.id === over.id);
+    const reordered = arrayMove(sortedSongs, oldIndex, newIndex);
+    setSortedSongs(reordered);
+    startTransition(async () => {
+      await reorderRehearsalSongs(session.id, reordered.map((s) => s.id));
+      router.refresh();
+    });
+  }
 
   function handleSaveProgramDate() {
     startTransition(async () => {
@@ -52,6 +95,7 @@ export default function SessionDetailClient({
     if (!confirm(`Remove "${title}" from this session?`)) return;
     startTransition(async () => {
       await deleteRehearsalSong(id, session.id);
+      setSortedSongs((prev) => prev.filter((s) => s.id !== id));
       router.refresh();
     });
   }
@@ -61,7 +105,9 @@ export default function SessionDetailClient({
     router.refresh();
   }
 
-  const lastKey = songs.length > 0 ? songs[songs.length - 1].key_used : null;
+  // Sync sortedSongs when server refreshes (new song added etc.)
+  // We use a key trick in JSX — instead, keep songs prop as source of truth on refresh
+  const lastKey = sortedSongs.length > 0 ? sortedSongs[sortedSongs.length - 1].key_used : null;
 
   return (
     <div>
@@ -151,7 +197,7 @@ export default function SessionDetailClient({
 
       {/* Song count summary */}
       <div className="flex items-center justify-between mb-4">        <p className="text-sm text-slate-500 dark:text-slate-400">
-          {songs.length} song{songs.length !== 1 ? 's' : ''} in this session
+          {sortedSongs.length} song{sortedSongs.length !== 1 ? 's' : ''} in this session
         </p>
         <button
           onClick={() => setShowAddForm((v) => !v)}
@@ -162,7 +208,7 @@ export default function SessionDetailClient({
       </div>
 
       {/* Visual song sequence */}
-      {songs.length === 0 && !showAddForm ? (
+      {sortedSongs.length === 0 && !showAddForm ? (
         <div className="text-center py-16">
           <p className="text-4xl mb-3">🎶</p>
           <p className="text-slate-500 dark:text-slate-400 font-medium">No songs yet</p>
@@ -174,37 +220,46 @@ export default function SessionDetailClient({
           </button>
         </div>
       ) : (
-        <div className="space-y-0">
-          {songs.map((song, index) => (
-            <div key={song.id}>
-              {/* Connector from previous song */}
-              {index > 0 && (
-                <div className="flex flex-col items-center py-1">
-                  {song.has_modulation ? (
-                    <div className="flex items-center gap-1.5 py-1">
-                      <div className="w-px h-3 bg-amber-300 dark:bg-amber-600" />
-                      <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-700">
-                        {song.modulation_from && song.modulation_to
-                          ? `${song.modulation_from} → ${song.modulation_to}`
-                          : 'key change'}
-                      </span>
-                      <div className="w-px h-3 bg-amber-300 dark:bg-amber-600" />
-                    </div>
-                  ) : (
-                    <div className="w-px h-5 bg-slate-200 dark:bg-slate-700" />
-                  )}
-                </div>
-              )}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={sortedSongs.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-0">
+              {sortedSongs.map((song, index) => {
+                const prevSong = index > 0 ? sortedSongs[index - 1] : null;
+                const prevKey = prevSong?.key_used ?? null;
+                const currKey = song.key_used ?? null;
+                const keyChanged = prevSong !== null && currKey !== null && prevKey !== currKey;
 
-              <SongCard
-                song={song}
-                position={index + 1}
-                onDelete={handleDeleteSong}
-                isPending={isPending}
-              />
+                return (
+                <div key={song.id}>
+                  {index > 0 && (
+                    <div className="flex flex-col items-center py-1">
+                      {keyChanged ? (
+                        <div className="flex items-center gap-1.5 py-1">
+                          <div className="w-px h-3 bg-amber-300 dark:bg-amber-600" />
+                          <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-700">
+                            {prevKey && currKey ? `${prevKey} → ${currKey}` : 'key change'}
+                          </span>
+                          <div className="w-px h-3 bg-amber-300 dark:bg-amber-600" />
+                        </div>
+                      ) : (
+                        <div className="w-px h-5 bg-slate-200 dark:bg-slate-700" />
+                      )}
+                    </div>
+                  )}
+                  <SortableSongCard
+                    song={song}
+                    position={index + 1}
+                    sessionId={session.id}
+                    onDelete={handleDeleteSong}
+                    onEdited={() => router.refresh()}
+                    isPending={isPending}
+                  />
+                </div>
+                );
+              })}
             </div>
-          ))}
-        </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       {/* Add Song Form */}
@@ -224,26 +279,90 @@ export default function SessionDetailClient({
   );
 }
 
+// ─── Sortable wrapper ──────────────────────────────────────────────────────────
+
+function SortableSongCard(props: {
+  song: RehearsalSong;
+  position: number;
+  sessionId: string;
+  onDelete: (id: string, title: string) => void;
+  onEdited: () => void;
+  isPending: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: props.song.id,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 20 : undefined,
+        opacity: isDragging ? 0.5 : 1,
+      }}
+    >
+      <SongCard {...props} dragListeners={listeners} dragAttributes={attributes} />
+    </div>
+  );
+}
+
 // ─── Song Card ─────────────────────────────────────────────────────────────────
 
 function SongCard({
   song,
   position,
+  sessionId,
   onDelete,
+  onEdited,
   isPending,
+  dragListeners,
+  dragAttributes,
 }: {
   song: RehearsalSong;
   position: number;
+  sessionId: string;
   onDelete: (id: string, title: string) => void;
+  onEdited: () => void;
   isPending: boolean;
+  dragListeners?: object;
+  dragAttributes?: object;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [editing, setEditing] = useState(false);
   const hasDetails = song.harmony_notes || song.arrangement_notes;
+
+  if (editing) {
+    return (
+      <EditSongForm
+        song={song}
+        sessionId={sessionId}
+        onDone={() => { setEditing(false); onEdited(); }}
+        onCancel={() => setEditing(false)}
+      />
+    );
+  }
 
   return (
     <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden">
       <div className="p-4">
         <div className="flex items-start gap-3">
+          {/* Drag handle */}
+          <button
+            type="button"
+            {...dragListeners}
+            {...dragAttributes}
+            className="shrink-0 mt-0.5 cursor-grab active:cursor-grabbing touch-none text-slate-300 dark:text-slate-600 hover:text-slate-400 dark:hover:text-slate-500 p-0.5"
+            title="Drag to reorder"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+              <circle cx="5" cy="4" r="1.5" /><circle cx="11" cy="4" r="1.5" />
+              <circle cx="5" cy="8" r="1.5" /><circle cx="11" cy="8" r="1.5" />
+              <circle cx="5" cy="12" r="1.5" /><circle cx="11" cy="12" r="1.5" />
+            </svg>
+          </button>
+
           {/* Position badge */}
           <span className="shrink-0 w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 text-xs font-bold flex items-center justify-center mt-0.5">
             {position}
@@ -253,7 +372,6 @@ function SongCard({
             <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm leading-snug">
               {song.song_title}
             </p>
-
             <div className="flex flex-wrap items-center gap-2 mt-1.5">
               {song.key_used && (
                 <span className="bg-violet-600 text-white text-xs font-bold px-2 py-0.5 rounded-lg">
@@ -281,6 +399,15 @@ function SongCard({
               </button>
             )}
             <button
+              onClick={() => setEditing(true)}
+              className="text-slate-400 dark:text-slate-500 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+              title="Edit song"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
+            <button
               onClick={() => onDelete(song.id, song.song_title)}
               disabled={isPending}
               className="text-slate-300 dark:text-slate-600 hover:text-red-400 transition-colors text-lg leading-none disabled:opacity-50"
@@ -291,33 +418,121 @@ function SongCard({
           </div>
         </div>
 
-        {/* Expanded details */}
         {expanded && hasDetails && (
           <div className="mt-3 pl-10 space-y-2 border-t border-slate-100 dark:border-slate-700 pt-3">
             {song.harmony_notes && (
               <div>
-                <p className="text-[10px] font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wide mb-0.5">
-                  Harmony
-                </p>
-                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
-                  {song.harmony_notes}
-                </p>
+                <p className="text-[10px] font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wide mb-0.5">Harmony</p>
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">{song.harmony_notes}</p>
               </div>
             )}
             {song.arrangement_notes && (
               <div>
-                <p className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide mb-0.5">
-                  Arrangement
-                </p>
-                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
-                  {song.arrangement_notes}
-                </p>
+                <p className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide mb-0.5">Arrangement</p>
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">{song.arrangement_notes}</p>
               </div>
             )}
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+// ─── Inline Edit Form ──────────────────────────────────────────────────────────
+
+function EditSongForm({
+  song,
+  sessionId,
+  onDone,
+  onCancel,
+}: {
+  song: RehearsalSong;
+  sessionId: string;
+  onDone: () => void;
+  onCancel: () => void;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const [title, setTitle] = useState(song.song_title);
+  const [key, setKey] = useState(song.key_used ?? '');
+  const [runThroughs, setRunThroughs] = useState(song.run_throughs);
+  const [harmonyNotes, setHarmonyNotes] = useState(song.harmony_notes ?? '');
+  const [arrangementNotes, setArrangementNotes] = useState(song.arrangement_notes ?? '');
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!title.trim()) return;
+    startTransition(async () => {
+      await updateRehearsalSong(song.id, sessionId, {
+        song_title: title.trim(),
+        key_used: key || null,
+        run_throughs: runThroughs,
+        harmony_notes: harmonyNotes.trim() || null,
+        arrangement_notes: arrangementNotes.trim() || null,
+      });
+      onDone();
+    });
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="bg-violet-50 dark:bg-violet-900/20 border-2 border-violet-200 dark:border-violet-700 rounded-2xl p-4 space-y-3"
+    >
+      <p className="text-xs font-semibold text-violet-700 dark:text-violet-400 uppercase tracking-wide">Edit Song</p>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          required
+          placeholder="Song title"
+          className="flex-1 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+        />
+        <select
+          value={key}
+          onChange={(e) => setKey(e.target.value)}
+          className="w-20 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-xl px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 shrink-0"
+        >
+          <option value="">Key</option>
+          {MUSICAL_KEYS.map((k) => <option key={k} value={k}>{k}</option>)}
+        </select>
+      </div>
+      <div className="flex items-center gap-3">
+        <label className="text-xs text-slate-500 dark:text-slate-400 shrink-0">Run-throughs</label>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => setRunThroughs((v) => Math.max(1, v - 1))}
+            className="w-7 h-7 rounded-full border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-slate-700">−</button>
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 w-4 text-center">{runThroughs}</span>
+          <button type="button" onClick={() => setRunThroughs((v) => v + 1)}
+            className="w-7 h-7 rounded-full border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-slate-700">+</button>
+        </div>
+      </div>
+      <textarea
+        value={harmonyNotes}
+        onChange={(e) => setHarmonyNotes(e.target.value)}
+        placeholder="Harmony notes…"
+        rows={2}
+        className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
+      />
+      <textarea
+        value={arrangementNotes}
+        onChange={(e) => setArrangementNotes(e.target.value)}
+        placeholder="Arrangement notes…"
+        rows={2}
+        className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
+      />
+      <div className="flex gap-2 pt-1">
+        <button type="button" onClick={onCancel}
+          className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-xl py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700">
+          Cancel
+        </button>
+        <button type="submit" disabled={isPending}
+          className="flex-1 bg-violet-600 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-violet-700 disabled:opacity-60">
+          {isPending ? 'Saving…' : 'Save'}
+        </button>
+      </div>
+    </form>
   );
 }
 
