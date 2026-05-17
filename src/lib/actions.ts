@@ -165,13 +165,22 @@ export async function addRehearsalSong(
   },
 ) {
   const supabase = await createClient();
-  const { count } = await supabase
-    .from('rehearsal_songs')
-    .select('*', { count: 'exact', head: true })
-    .eq('session_id', sessionId);
+  // Position accounts for both standalone songs AND medley groups in the session
+  const [{ count: songCount }, { count: medleyCount }] = await Promise.all([
+    supabase
+      .from('rehearsal_songs')
+      .select('*', { count: 'exact', head: true })
+      .eq('session_id', sessionId)
+      .is('medley_group_id', null),
+    supabase
+      .from('rehearsal_medley_groups')
+      .select('*', { count: 'exact', head: true })
+      .eq('session_id', sessionId),
+  ]);
   const { error } = await supabase.from('rehearsal_songs').insert({
     session_id: sessionId,
-    position: (count ?? 0) + 1,
+    position: (songCount ?? 0) + (medleyCount ?? 0) + 1,
+    medley_group_id: null,
     ...data,
   });
   if (error) throw new Error(error.message);
@@ -307,6 +316,113 @@ export async function updateRehearsalSong(
 }
 
 export async function reorderRehearsalSongs(sessionId: string, orderedIds: string[]) {
+  const supabase = await createClient();
+  await Promise.all(
+    orderedIds.map((id, index) =>
+      supabase.from('rehearsal_songs').update({ position: index + 1 }).eq('id', id),
+    ),
+  );
+  revalidatePath(`/rehearsal/${sessionId}`);
+}
+
+// ─── MEDLEY GROUPS ────────────────────────────────────────────────────────────
+
+export async function addMedleyGroup(sessionId: string, name: string): Promise<string> {
+  const supabase = await createClient();
+  const [{ count: songCount }, { count: medleyCount }] = await Promise.all([
+    supabase
+      .from('rehearsal_songs')
+      .select('*', { count: 'exact', head: true })
+      .eq('session_id', sessionId)
+      .is('medley_group_id', null),
+    supabase
+      .from('rehearsal_medley_groups')
+      .select('*', { count: 'exact', head: true })
+      .eq('session_id', sessionId),
+  ]);
+  const position = (songCount ?? 0) + (medleyCount ?? 0) + 1;
+  const { data, error } = await supabase
+    .from('rehearsal_medley_groups')
+    .insert({ session_id: sessionId, name: name.trim(), position })
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  revalidatePath(`/rehearsal/${sessionId}`);
+  return data.id;
+}
+
+export async function deleteMedleyGroup(id: string, sessionId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from('rehearsal_medley_groups').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/rehearsal/${sessionId}`);
+}
+
+export async function renameMedleyGroup(id: string, sessionId: string, name: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('rehearsal_medley_groups')
+    .update({ name: name.trim() })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/rehearsal/${sessionId}`);
+}
+
+export async function addSongToMedley(
+  medleyGroupId: string,
+  sessionId: string,
+  data: {
+    song_title: string;
+    song_id: string | null;
+    key_used: string | null;
+    harmony_notes: string | null;
+    arrangement_notes: string | null;
+    run_throughs: number;
+  },
+) {
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from('rehearsal_songs')
+    .select('*', { count: 'exact', head: true })
+    .eq('medley_group_id', medleyGroupId);
+  const { error } = await supabase.from('rehearsal_songs').insert({
+    session_id: sessionId,
+    medley_group_id: medleyGroupId,
+    position: (count ?? 0) + 1,
+    has_modulation: false,
+    modulation_from: null,
+    modulation_to: null,
+    ...data,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath(`/rehearsal/${sessionId}`);
+}
+
+export async function reorderSessionItems(
+  sessionId: string,
+  items: Array<{ type: 'song' | 'medley'; id: string }>,
+) {
+  const supabase = await createClient();
+  await Promise.all(
+    items.map(({ type, id }, index) => {
+      if (type === 'song') {
+        return supabase.from('rehearsal_songs').update({ position: index + 1 }).eq('id', id);
+      } else {
+        return supabase
+          .from('rehearsal_medley_groups')
+          .update({ position: index + 1 })
+          .eq('id', id);
+      }
+    }),
+  );
+  revalidatePath(`/rehearsal/${sessionId}`);
+}
+
+export async function reorderSongsInMedley(
+  medleyGroupId: string,
+  sessionId: string,
+  orderedIds: string[],
+) {
   const supabase = await createClient();
   await Promise.all(
     orderedIds.map((id, index) =>

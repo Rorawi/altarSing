@@ -164,3 +164,29 @@ SET
     ELSE '{}'::TEXT[]
   END
 WHERE songs = '[]'::jsonb;
+
+-- =====================================================
+-- Migration: Medley Groups
+-- Run this AFTER the migrations above
+-- =====================================================
+
+-- Medley groups table: named groups of songs within a rehearsal session
+CREATE TABLE IF NOT EXISTS rehearsal_medley_groups (
+  id          UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+  session_id  UUID        NOT NULL REFERENCES rehearsal_sessions(id) ON DELETE CASCADE,
+  name        TEXT        NOT NULL,
+  position    INTEGER     NOT NULL DEFAULT 1,
+  created_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+ALTER TABLE rehearsal_medley_groups ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all on rehearsal_medley_groups"
+  ON rehearsal_medley_groups FOR ALL USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_rehearsal_medley_groups_session
+  ON rehearsal_medley_groups(session_id, position);
+
+-- Link rehearsal songs to a medley group (NULL = standalone song in session)
+ALTER TABLE rehearsal_songs
+  ADD COLUMN IF NOT EXISTS medley_group_id UUID
+    REFERENCES rehearsal_medley_groups(id) ON DELETE CASCADE;

@@ -10,15 +10,21 @@ export default async function SessionDetailPage({
   const { sessionId } = await params;
   const supabase = await createClient();
 
-  const [{ data: session }, { data: songs }, { data: librarySongs }] = await Promise.all([
-    supabase.from('rehearsal_sessions').select('*').eq('id', sessionId).single(),
-    supabase
-      .from('rehearsal_songs')
-      .select('*')
-      .eq('session_id', sessionId)
-      .order('position'),
-    supabase.from('songs').select('id, title, musical_key').order('title'),
-  ]);
+  const [{ data: session }, { data: songs }, { data: medleyGroups }, { data: librarySongs }] =
+    await Promise.all([
+      supabase.from('rehearsal_sessions').select('*').eq('id', sessionId).single(),
+      supabase
+        .from('rehearsal_songs')
+        .select('*')
+        .eq('session_id', sessionId)
+        .order('position'),
+      supabase
+        .from('rehearsal_medley_groups')
+        .select('*')
+        .eq('session_id', sessionId)
+        .order('position'),
+      supabase.from('songs').select('id, title, musical_key').order('title'),
+    ]);
 
   if (!session) notFound();
 
@@ -26,6 +32,7 @@ export default async function SessionDetailPage({
     <SessionDetailClient
       session={session}
       songs={songs ?? []}
+      medleyGroups={medleyGroups ?? []}
       librarySongs={librarySongs ?? []}
     />
   );

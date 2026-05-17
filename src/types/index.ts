@@ -91,6 +91,15 @@ export interface RehearsalSong {
   harmony_notes: string | null;
   arrangement_notes: string | null;
   run_throughs: number;
+  medley_group_id: string | null;
+  created_at: string;
+}
+
+export interface RehearsalMedleyGroup {
+  id: string;
+  session_id: string;
+  name: string;
+  position: number;
   created_at: string;
 }
 
