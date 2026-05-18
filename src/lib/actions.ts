@@ -162,6 +162,7 @@ export async function addRehearsalSong(
     harmony_notes: string | null;
     arrangement_notes: string | null;
     run_throughs: number;
+    service_moment: string | null;
   },
 ) {
   const supabase = await createClient();
@@ -307,6 +308,7 @@ export async function updateRehearsalSong(
     run_throughs: number;
     harmony_notes: string | null;
     arrangement_notes: string | null;
+    service_moment: string | null;
   },
 ) {
   const supabase = await createClient();
@@ -378,6 +380,7 @@ export async function addSongToMedley(
     harmony_notes: string | null;
     arrangement_notes: string | null;
     run_throughs: number;
+    service_moment: string | null;
   },
 ) {
   const supabase = await createClient();

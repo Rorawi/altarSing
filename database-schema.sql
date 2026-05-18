@@ -190,3 +190,6 @@ CREATE INDEX IF NOT EXISTS idx_rehearsal_medley_groups_session
 ALTER TABLE rehearsal_songs
   ADD COLUMN IF NOT EXISTS medley_group_id UUID
     REFERENCES rehearsal_medley_groups(id) ON DELETE CASCADE;
+
+-- Per-song service moment tag (carries through to service log as a tag)
+ALTER TABLE rehearsal_songs ADD COLUMN IF NOT EXISTS service_moment TEXT;

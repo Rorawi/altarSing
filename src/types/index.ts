@@ -92,6 +92,7 @@ export interface RehearsalSong {
   arrangement_notes: string | null;
   run_throughs: number;
   medley_group_id: string | null;
+  service_moment: string | null;
   created_at: string;
 }
 

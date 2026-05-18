@@ -32,7 +32,7 @@ import {
   addSongToMedley,
   reorderSongsInMedley,
 } from '@/lib/actions';
-import { MUSICAL_KEYS } from '@/lib/constants';
+import { MUSICAL_KEYS, SERVICE_MOMENTS } from '@/lib/constants';
 
 // ─── Types & Helpers ──────────────────────────────────────────────────────────
 
@@ -565,6 +565,11 @@ function StandaloneSongCard({
               {song.run_throughs === 1 && (
                 <span className="text-xs text-slate-400 dark:text-slate-500">× 1 run-through</span>
               )}
+              {song.service_moment && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 font-medium border border-violet-200 dark:border-violet-700">
+                  {song.service_moment}
+                </span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -932,6 +937,11 @@ function MedleySongCard({
                   × {song.run_throughs}
                 </span>
               )}
+              {song.service_moment && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-medium border border-amber-200 dark:border-amber-700">
+                  {song.service_moment}
+                </span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -1106,6 +1116,7 @@ function EditSongForm({
   const [runThroughs, setRunThroughs] = useState(song.run_throughs);
   const [harmonyNotes, setHarmonyNotes] = useState(song.harmony_notes ?? '');
   const [arrangementNotes, setArrangementNotes] = useState(song.arrangement_notes ?? '');
+  const [serviceMoment, setServiceMoment] = useState(song.service_moment ?? '');
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -1117,6 +1128,7 @@ function EditSongForm({
         run_throughs: runThroughs,
         harmony_notes: harmonyNotes.trim() || null,
         arrangement_notes: arrangementNotes.trim() || null,
+        service_moment: serviceMoment || null,
       });
       onDone();
     });
@@ -1162,6 +1174,14 @@ function EditSongForm({
       <textarea value={arrangementNotes} onChange={(e) => setArrangementNotes(e.target.value)}
         placeholder="Arrangement notes…" rows={2}
         className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none" />
+      <div>
+        <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Service moment <span className="font-normal">(optional)</span></label>
+        <select value={serviceMoment} onChange={(e) => setServiceMoment(e.target.value)}
+          className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500">
+          <option value="">— None —</option>
+          {SERVICE_MOMENTS.map((m) => <option key={m} value={m}>{m}</option>)}
+        </select>
+      </div>
       <div className="flex gap-2 pt-1">
         <button type="button" onClick={onCancel}
           className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-xl py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700">
@@ -1198,6 +1218,7 @@ function AddSongForm({
   const [runThroughs, setRunThroughs] = useState(1);
   const [harmonyNotes, setHarmonyNotes] = useState('');
   const [arrangementNotes, setArrangementNotes] = useState('');
+  const [serviceMoment, setServiceMoment] = useState('');
 
   const filteredLibrary = librarySearch.trim()
     ? librarySongs.filter((s) => s.title.toLowerCase().includes(librarySearch.toLowerCase()))
@@ -1224,6 +1245,7 @@ function AddSongForm({
         harmony_notes: harmonyNotes.trim() || null,
         arrangement_notes: arrangementNotes.trim() || null,
         run_throughs: runThroughs,
+        service_moment: serviceMoment || null,
       });
       onAdded();
     });
@@ -1329,6 +1351,17 @@ function AddSongForm({
           className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 resize-none placeholder-slate-400" />
       </div>
 
+      <div>
+        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+          Service Moment <span className="text-slate-400 font-normal">(optional)</span>
+        </label>
+        <select value={serviceMoment} onChange={(e) => setServiceMoment(e.target.value)}
+          className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400">
+          <option value="">— None —</option>
+          {SERVICE_MOMENTS.map((m) => <option key={m} value={m}>{m}</option>)}
+        </select>
+      </div>
+
       <button type="submit"
         disabled={isPending || (useLibrary ? !selectedSong && !librarySearch.trim() : !manualTitle.trim())}
         className="w-full bg-violet-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors disabled:opacity-50">
@@ -1364,6 +1397,7 @@ function AddSongToMedleyForm({
   const [runThroughs, setRunThroughs] = useState(1);
   const [harmonyNotes, setHarmonyNotes] = useState('');
   const [arrangementNotes, setArrangementNotes] = useState('');
+  const [serviceMoment, setServiceMoment] = useState('');
 
   const filteredLibrary = librarySearch.trim()
     ? librarySongs.filter((s) => s.title.toLowerCase().includes(librarySearch.toLowerCase()))
@@ -1389,6 +1423,7 @@ function AddSongToMedleyForm({
         harmony_notes: harmonyNotes.trim() || null,
         arrangement_notes: arrangementNotes.trim() || null,
         run_throughs: runThroughs,
+        service_moment: serviceMoment || null,
       });
       onAdded();
     });
@@ -1482,6 +1517,15 @@ function AddSongToMedleyForm({
       <textarea value={arrangementNotes} onChange={(e) => setArrangementNotes(e.target.value)}
         placeholder="Arrangement notes… (optional)" rows={2}
         className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-500 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none" />
+
+      <div>
+        <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">Service moment <span className="font-normal">(optional)</span></label>
+        <select value={serviceMoment} onChange={(e) => setServiceMoment(e.target.value)}
+          className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
+          <option value="">— None —</option>
+          {SERVICE_MOMENTS.map((m) => <option key={m} value={m}>{m}</option>)}
+        </select>
+      </div>
 
       <button type="submit"
         disabled={isPending || (useLibrary ? !selectedSong && !librarySearch.trim() : !manualTitle.trim())}

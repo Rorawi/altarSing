@@ -8,7 +8,7 @@ export default async function LogPage() {
   // Auto-convert any rehearsal sessions whose program_date has arrived
   const { data: pendingSessions } = await supabase
     .from('rehearsal_sessions')
-    .select('*, rehearsal_songs(id, song_title, song_id, key_used, position)')
+    .select('*, rehearsal_songs(id, song_title, song_id, key_used, position, service_moment)')
     .lte('program_date', today)
     .eq('program_converted', false)
     .not('program_date', 'is', null);
@@ -16,13 +16,14 @@ export default async function LogPage() {
   if (pendingSessions && pendingSessions.length > 0) {
     for (const session of pendingSessions) {
       const orderedSongs = (session.rehearsal_songs as {
-        id: string; song_title: string; song_id: string | null; key_used: string | null; position: number;
+        id: string; song_title: string; song_id: string | null; key_used: string | null; position: number; service_moment: string | null;
       }[]).sort((a, b) => a.position - b.position);
 
       const songs = orderedSongs.map((s) => ({
         title: s.song_title,
         key: s.key_used,
         song_id: s.song_id,
+        tags: s.service_moment ? [s.service_moment] : undefined,
       }));
 
       const primary = songs[0] ?? { title: session.name, key: null, song_id: null };
