@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS choir_members (
   name        TEXT  NOT NULL,
   role        TEXT,
   image_url   TEXT,
+  birth_date  DATE,
   created_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 

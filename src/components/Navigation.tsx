@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useLoading } from '@/lib/loading-context';
 
 const navItems = [
   { href: '/library',    label: 'Library',    icon: '🎵' },
@@ -12,6 +13,16 @@ const navItems = [
 
 export default function Navigation({ variant }: { variant: 'bottom' | 'side' }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { startLoading } = useLoading();
+
+  const handleNavigation = (href: string) => {
+    // Only show loading if navigating to a different section
+    if (!pathname.startsWith(href)) {
+      startLoading();
+    }
+    router.push(href);
+  };
 
   if (variant === 'bottom') {
     return (
@@ -21,9 +32,9 @@ export default function Navigation({ variant }: { variant: 'bottom' | 'side' }) 
             const isActive = pathname.startsWith(item.href);
             return (
               <li key={item.href} className="flex-1">
-                <Link
-                  href={item.href}
-                  className={`flex flex-col items-center justify-center py-3 px-1 gap-1 transition-colors ${
+                <button
+                  onClick={() => handleNavigation(item.href)}
+                  className={`w-full flex flex-col items-center justify-center py-3 px-1 gap-1 transition-colors ${
                     isActive ? 'text-violet-600 dark:text-violet-400' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
                   }`}
                 >
@@ -31,7 +42,7 @@ export default function Navigation({ variant }: { variant: 'bottom' | 'side' }) 
                   <span className={`text-[10px] font-medium ${isActive ? 'text-violet-600 dark:text-violet-400' : ''}`}>
                     {item.label}
                   </span>
-                </Link>
+                </button>
               </li>
             );
           })}
@@ -47,9 +58,9 @@ export default function Navigation({ variant }: { variant: 'bottom' | 'side' }) 
           const isActive = pathname.startsWith(item.href);
           return (
             <li key={item.href}>
-              <Link
-                href={item.href}
-                className={`flex items-center gap-3 px-4 py-2.5 rounded-lg mx-2 text-sm font-medium transition-colors ${
+              <button
+                onClick={() => handleNavigation(item.href)}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg mx-2 text-sm font-medium transition-colors text-left ${
                   isActive
                     ? 'bg-violet-50 text-violet-700'
                     : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
@@ -57,7 +68,7 @@ export default function Navigation({ variant }: { variant: 'bottom' | 'side' }) 
               >
                 <span className="text-lg">{item.icon}</span>
                 <span>{item.label}</span>
-              </Link>
+              </button>
             </li>
           );
         })}

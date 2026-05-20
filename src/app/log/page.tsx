@@ -1,7 +1,9 @@
+import { Suspense } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import LogClient from './LogClient';
+import { SkeletonLogPage } from '@/components/SkeletonLoaders';
 
-export default async function LogPage() {
+async function LogContent() {
   const supabase = await createClient();
   const today = new Date().toISOString().split('T')[0];
 
@@ -73,4 +75,12 @@ export default async function LogPage() {
   }
 
   return <LogClient initialLogs={logs ?? []} />;
+}
+
+export default function LogPage() {
+  return (
+    <Suspense fallback={<SkeletonLogPage />}>
+      <LogContent />
+    </Suspense>
+  );
 }

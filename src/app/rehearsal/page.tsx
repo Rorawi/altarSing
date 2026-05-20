@@ -1,7 +1,9 @@
+import { Suspense } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import RehearsalClient from './RehearsalClient';
+import { SkeletonRehearsalPage } from '@/components/SkeletonLoaders';
 
-export default async function RehearsalPage() {
+async function RehearsalContent() {
   const supabase = await createClient();
 
   const [{ data: sessions }, { data: harmonies }] = await Promise.all([
@@ -20,5 +22,13 @@ export default async function RehearsalPage() {
       initialSessions={sessions ?? []}
       initialHarmonies={harmonies ?? []}
     />
+  );
+}
+
+export default function RehearsalPage() {
+  return (
+    <Suspense fallback={<SkeletonRehearsalPage />}>
+      <RehearsalContent />
+    </Suspense>
   );
 }

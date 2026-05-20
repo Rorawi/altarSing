@@ -112,6 +112,7 @@ export async function addChoirMember(formData: FormData) {
     name: (formData.get('name') as string).trim(),
     role: (formData.get('role') as string)?.trim() || null,
     image_url: (formData.get('image_url') as string)?.trim() || null,
+    birth_date: (formData.get('birth_date') as string)?.trim() || null,
   });
   if (error) throw new Error(error.message);
   revalidatePath('/attendance');
@@ -121,6 +122,21 @@ export async function deleteChoirMember(id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from('choir_members').delete().eq('id', id);
   if (error) throw new Error(error.message);
+  revalidatePath('/attendance');
+}
+
+export async function updateBirthdates(updates: Array<{ id: string; birth_date: string | null }>) {
+  const supabase = await createClient();
+  
+  for (const update of updates) {
+    const { error } = await supabase
+      .from('choir_members')
+      .update({ birth_date: update.birth_date })
+      .eq('id', update.id);
+    
+    if (error) throw new Error(error.message);
+  }
+  
   revalidatePath('/attendance');
 }
 

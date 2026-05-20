@@ -46,6 +46,7 @@ export interface ChoirMember {
   name: string;
   image_url: string | null;
   role: string | null;
+  birth_date: string | null;
   created_at: string;
 }
 

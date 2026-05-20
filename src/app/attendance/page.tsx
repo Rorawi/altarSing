@@ -1,7 +1,9 @@
+import { Suspense } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import AttendanceClient from './AttendanceClient';
+import { SkeletonAttendancePage } from '@/components/SkeletonLoaders';
 
-export default async function AttendancePage({
+async function AttendanceContent({
   searchParams,
 }: {
   searchParams: Promise<{ date?: string }>;
@@ -32,4 +34,16 @@ export default async function AttendancePage({
   }));
 
   return <AttendanceClient members={membersWithAttendance} sessionDate={sessionDate} />;
+}
+
+export default function AttendancePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ date?: string }>;
+}) {
+  return (
+    <Suspense fallback={<SkeletonAttendancePage />}>
+      <AttendanceContent searchParams={searchParams} />
+    </Suspense>
+  );
 }

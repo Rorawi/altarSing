@@ -1,7 +1,9 @@
+import { Suspense } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import SongLibraryClient from './SongLibraryClient';
+import { SkeletonLibraryPage } from '@/components/SkeletonLoaders';
 
-export default async function LibraryPage() {
+async function LibraryContent() {
   const supabase = await createClient();
   const { data: songs, error } = await supabase
     .from('songs')
@@ -18,4 +20,12 @@ export default async function LibraryPage() {
   }
 
   return <SongLibraryClient initialSongs={songs ?? []} />;
+}
+
+export default function LibraryPage() {
+  return (
+    <Suspense fallback={<SkeletonLibraryPage />}>
+      <LibraryContent />
+    </Suspense>
+  );
 }
