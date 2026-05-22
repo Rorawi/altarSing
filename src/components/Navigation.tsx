@@ -26,7 +26,7 @@ export default function Navigation({ variant }: { variant: 'bottom' | 'side' }) 
 
   if (variant === 'bottom') {
     return (
-      <nav className="flex-shrink-0 z-50 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
+      <nav className="shrink-0 z-50 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
         <ul className="flex">
           {navItems.map((item) => {
             const isActive = pathname.startsWith(item.href);

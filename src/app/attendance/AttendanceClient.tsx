@@ -88,7 +88,10 @@ export default function AttendanceClient({ members, sessionDate }: Props) {
     .filter((m) => m.birth_date && !isBirthdayToday(m.birth_date))
     .filter((m) => {
       const birth = new Date(m.birth_date!);
-      return birth.getMonth() === today.getMonth();
+      return (
+        birth.getMonth() === today.getMonth() &&
+        birth.getDate() > today.getDate()
+      );
     })
     .sort((a, b) => {
       const aDate = new Date(a.birth_date!);
@@ -238,26 +241,11 @@ export default function AttendanceClient({ members, sessionDate }: Props) {
         className="mb-3 w-full border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
       />
 
-      {/* Birthday reminder banner */}
-      {members.some((m) => isBirthdayToday(m.birth_date)) && (
-        <div className="mb-4 bg-gradient-to-r from-pink-100 to-violet-100 dark:from-pink-900/30 dark:to-violet-900/30 border-2 border-pink-300 dark:border-pink-700 rounded-xl p-3.5">
-          <p className="text-sm font-bold text-pink-900 dark:text-pink-200 mb-2">
-            🎉 Birthdays Today!
-          </p>
-          <p className="text-xs text-pink-800 dark:text-pink-300">
-            {members
-              .filter((m) => isBirthdayToday(m.birth_date))
-              .map((m) => m.name)
-              .join(", ")}
-          </p>
-        </div>
-      )}
-
       {/* Upcoming birthdays reminder */}
       {upcomingBirthdays.length > 0 && (
         <div className="mb-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-3.5">
           <p className="text-xs font-semibold text-blue-900 dark:text-blue-200 mb-2">
-            📅 Upcoming Birthdays This Month
+            📅{" "}Upcoming Birthdays This Month
           </p>
           <div className="space-y-1.5">
             {upcomingBirthdays.slice(0, 5).map((m) => {
@@ -459,7 +447,7 @@ export default function AttendanceClient({ members, sessionDate }: Props) {
             return (
               <div
                 key={member.id}
-                className={`shrink-0 snap-center w-[78vw] max-w-[300px] bg-white dark:bg-slate-800 rounded-2xl border shadow-md overflow-hidden flex flex-col transition-opacity ${isPending ? "opacity-60 pointer-events-none" : ""} ${borderColor}`}
+                className={`shrink-0 snap-center w-[78vw] max-w-75 bg-white dark:bg-slate-800 rounded-2xl border shadow-md overflow-hidden flex flex-col transition-opacity ${isPending ? "opacity-60 pointer-events-none" : ""} ${borderColor}`}
               >
                 {/* Card top — avatar + info */}
                 <div
@@ -696,21 +684,11 @@ function BirthdayCard({
   const age = getAge(member.birth_date);
 
   return (
-    <div className="shrink-0 snap-center w-[78vw] max-w-[300px] bg-gradient-to-br from-pink-100 via-violet-100 to-blue-100 dark:from-pink-900/40 dark:via-violet-900/40 dark:to-blue-900/40 rounded-2xl border-2 border-pink-300 dark:border-pink-700 shadow-lg overflow-hidden flex flex-col relative">
-      {/* Confetti decorations */}
-      <div className="absolute inset-0 opacity-30 pointer-events-none overflow-hidden">
-        <div className="absolute top-2 left-4 text-2xl animate-bounce">🎉</div>
-        <div className="absolute top-4 right-6 text-2xl animate-pulse">🎈</div>
-        <div className="absolute bottom-4 left-3 text-xl animate-bounce">
-          ⭐
-        </div>
-        <div className="absolute bottom-6 right-4 text-2xl animate-pulse">
-          🎉
-        </div>
-      </div>
+    <div className="shrink-0 snap-center w-[78vw] max-w-75 bg-linear-to-br from-pink-100 via-violet-100 to-blue-100 dark:from-pink-900/40 dark:via-violet-900/40 dark:to-blue-900/40 rounded-2xl border-2 border-pink-300 dark:border-pink-700 shadow-lg overflow-hidden flex flex-col relative">
+
 
       {/* Card content */}
-      <div className="px-4 pt-4 pb-5 flex flex-col items-center relative z-10 h-[234px]">
+      <div className="px-4 pt-4 pb-5 flex flex-col items-center relative z-10 h-58.5">
 
 
         {/* Avatar */}
@@ -737,9 +715,9 @@ function BirthdayCard({
         </div>
 
         {/* Birthday message */}
-        <p className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-violet-600 bg-clip-text text-transparent text-center leading-tight">
+        <p className="text-lg font-bold bg-linear-to-r from-pink-600 to-violet-600 bg-clip-text text-transparent text-center leading-tight">
           Happy Birthday {" "}
-          <span className="font-bold text-slate-900 dark:text-slate-100 text-lg mt-1.5 text-center">
+          <span className="text-slate-900 dark:text-slate-100 font-normal mt-1.5 text-center">
             {member.name}
           </span>
           !
