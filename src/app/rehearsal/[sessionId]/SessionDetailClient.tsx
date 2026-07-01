@@ -1272,10 +1272,8 @@ function SongLeaderInput({
           onChange={(e) => { setInputValue(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
           onBlur={() => {
-            setTimeout(() => {
-              commitTypedLeader();
-              setOpen(false);
-            }, 120);
+            commitTypedLeader();
+            setOpen(false);
           }}
           onKeyDown={handleKeyDown}
           placeholder={values.length === 0 ? 'Add leader name…' : ''}
