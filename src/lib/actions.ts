@@ -580,6 +580,20 @@ export async function removeFromCollection(id: string) {
   revalidatePath('/library');
 }
 
+export async function reorderCollectionSongs(collectionId: string, orderedIds: string[]) {
+  const supabase = await createClient();
+  await Promise.all(
+    orderedIds.map((id, index) =>
+      supabase
+        .from('collection_songs')
+        .update({ position: index + 1 })
+        .eq('id', id)
+        .eq('collection_id', collectionId),
+    ),
+  );
+  revalidatePath('/library');
+}
+
 export async function getCollectionSongLyrics(collectionSongId: string): Promise<string | null> {
   const supabase = await createClient();
   const { data, error } = await supabase

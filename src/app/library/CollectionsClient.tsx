@@ -1,7 +1,23 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import type { Song, SongCollection, CollectionSong, CollectionWithSongs } from '@/types';
 import {
   createCollection,
@@ -9,6 +25,7 @@ import {
   deleteCollection,
   addSongToCollection,
   removeFromCollection,
+  reorderCollectionSongs,
 } from '@/lib/actions';
 import { MUSICAL_KEYS } from '@/lib/constants';
 import LyricsModal from '@/components/LyricsModal';
@@ -29,11 +46,17 @@ export default function CollectionsClient({
   const [listSearch, setListSearch] = useState('');
   const [detailSearch, setDetailSearch] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [detailSongs, setDetailSongs] = useState<CollectionSong[]>([]);
   const [lyricsTarget, setLyricsTarget] = useState<{
     title: string;
     songId: string | null;
     collectionSongId: string | null;
   } | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+  );
 
   const selected = selectedId ? (collections.find((c) => c.id === selectedId) ?? null) : null;
 
@@ -48,13 +71,21 @@ export default function CollectionsClient({
       )
     : collections;
 
-  const filteredSongs: CollectionSong[] = selected
-    ? selected.collection_songs.filter(
-        (s) =>
-          !detailSearch.trim() ||
-          s.song_title.toLowerCase().includes(detailSearch.toLowerCase()),
-      )
-    : [];
+  useEffect(() => {
+    if (!selected) {
+      setDetailSongs([]);
+      return;
+    }
+    setDetailSongs([...selected.collection_songs].sort((a, b) => a.position - b.position));
+  }, [selectedId, collections, selected]);
+
+  const filteredSongs: CollectionSong[] = detailSongs.filter(
+    (s) =>
+      !detailSearch.trim() ||
+      s.song_title.toLowerCase().includes(detailSearch.toLowerCase()),
+  );
+
+  const isReorderDisabled = !!detailSearch.trim();
 
   function handleBack() {
     setSelectedId(null);
@@ -76,6 +107,24 @@ export default function CollectionsClient({
   function handleRemoveSong(id: string) {
     startTransition(async () => {
       await removeFromCollection(id);
+      router.refresh();
+    });
+  }
+
+  function handleSongDragEnd(event: DragEndEvent) {
+    if (!selected || isReorderDisabled) return;
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = detailSongs.findIndex((s) => s.id === active.id);
+    const newIndex = detailSongs.findIndex((s) => s.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+
+    const reordered = arrayMove(detailSongs, oldIndex, newIndex);
+    setDetailSongs(reordered);
+
+    startTransition(async () => {
+      await reorderCollectionSongs(selected.id, reordered.map((s) => s.id));
       router.refresh();
     });
   }
@@ -255,63 +304,33 @@ export default function CollectionsClient({
         {/* Song list */}
         {filteredSongs.length > 0 ? (
           <div className="space-y-2 mb-4">
-            {filteredSongs.map((song, index) => (
-              <div
-                key={song.id}
-                className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 flex items-start gap-3"
-              >
-                <span className="text-slate-400 dark:text-slate-500 text-xs font-mono shrink-0 mt-1 w-5 text-right">
-                  {index + 1}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm leading-snug">
-                    {song.song_title}
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2 mt-1">
-                    {song.song_key && (
-                      <span className="bg-violet-600 text-white text-xs font-bold px-2 py-0.5 rounded-lg">
-                        {song.song_key}
-                      </span>
-                    )}
-                    {song.song_youtube_link && (
-                      <a
-                        href={song.song_youtube_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-violet-600 dark:text-violet-400 hover:underline flex items-center gap-1"
-                      >
-                        ▶ YouTube
-                      </a>
-                    )}
-                    <button
-                      onClick={() =>
-                        setLyricsTarget({
-                          title: song.song_title,
-                          songId: song.song_id,
-                          collectionSongId: song.id,
-                        })
-                      }
-                      className="text-xs text-slate-400 dark:text-slate-500 hover:text-violet-500 dark:hover:text-violet-400 font-medium transition-colors"
-                    >
-                      Lyrics
-                    </button>
-                  </div>
-                  {song.song_notes && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed line-clamp-2">
-                      {song.song_notes}
-                    </p>
-                  )}
-                </div>
-                <button
-                  onClick={() => handleRemoveSong(song.id)}
-                  disabled={isPending}
-                  className="text-slate-300 dark:text-slate-600 hover:text-red-400 transition-colors text-xl leading-none shrink-0 disabled:opacity-50"
-                  title="Remove from collection"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
+            {isReorderDisabled ? (
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 ml-1">Clear search to drag and reorder songs.</p>
+            ) : (
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 ml-1">Drag songs by the handle to reorder.</p>
+            )}
+
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSongDragEnd}>
+              <SortableContext items={filteredSongs.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+                {filteredSongs.map((song, index) => (
+                  <SortableCollectionSongRow
+                    key={song.id}
+                    song={song}
+                    index={index}
+                    isPending={isPending}
+                    dragDisabled={isReorderDisabled}
+                    onOpenLyrics={() =>
+                      setLyricsTarget({
+                        title: song.song_title,
+                        songId: song.song_id,
+                        collectionSongId: song.id,
+                      })
+                    }
+                    onRemove={() => handleRemoveSong(song.id)}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
           </div>
         ) : (
           <div className="text-center py-12">
@@ -471,6 +490,97 @@ export default function CollectionsClient({
       collectionSongId={lyricsTarget?.collectionSongId}
     />
     </>
+  );
+}
+
+function SortableCollectionSongRow({
+  song,
+  index,
+  isPending,
+  dragDisabled,
+  onOpenLyrics,
+  onRemove,
+}: {
+  song: CollectionSong;
+  index: number;
+  isPending: boolean;
+  dragDisabled: boolean;
+  onOpenLyrics: () => void;
+  onRemove: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
+    id: song.id,
+    disabled: dragDisabled,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 flex items-start gap-3"
+    >
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        disabled={dragDisabled}
+        className="shrink-0 mt-0.5 p-0.5 text-slate-300 dark:text-slate-600 hover:text-slate-500 disabled:opacity-30 cursor-grab active:cursor-grabbing touch-none"
+        title={dragDisabled ? 'Clear search to reorder' : 'Drag to reorder'}
+      >
+        <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+          <circle cx="5" cy="4" r="1.5" /><circle cx="11" cy="4" r="1.5" />
+          <circle cx="5" cy="8" r="1.5" /><circle cx="11" cy="8" r="1.5" />
+          <circle cx="5" cy="12" r="1.5" /><circle cx="11" cy="12" r="1.5" />
+        </svg>
+      </button>
+
+      <span className="text-slate-400 dark:text-slate-500 text-xs font-mono shrink-0 mt-1 w-5 text-right">
+        {index + 1}
+      </span>
+
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm leading-snug">
+          {song.song_title}
+        </p>
+        <div className="flex flex-wrap items-center gap-2 mt-1">
+          {song.song_key && (
+            <span className="bg-violet-600 text-white text-xs font-bold px-2 py-0.5 rounded-lg">
+              {song.song_key}
+            </span>
+          )}
+          {song.song_youtube_link && (
+            <a
+              href={song.song_youtube_link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-violet-600 dark:text-violet-400 hover:underline flex items-center gap-1"
+            >
+              ▶ YouTube
+            </a>
+          )}
+          <button
+            onClick={onOpenLyrics}
+            className="text-xs text-slate-400 dark:text-slate-500 hover:text-violet-500 dark:hover:text-violet-400 font-medium transition-colors"
+          >
+            Lyrics
+          </button>
+        </div>
+        {song.song_notes && (
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed line-clamp-2">
+            {song.song_notes}
+          </p>
+        )}
+      </div>
+
+      <button
+        onClick={onRemove}
+        disabled={isPending}
+        className="text-slate-300 dark:text-slate-600 hover:text-red-400 transition-colors text-xl leading-none shrink-0 disabled:opacity-50"
+        title="Remove from collection"
+      >
+        ×
+      </button>
+    </div>
   );
 }
 
