@@ -46,8 +46,8 @@ export default function EditBirthdaysModal({ members, isOpen, onClose }: Props) 
   const membersSorted = [...members].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-60 flex items-end">
-      <div className="bg-white dark:bg-slate-900 w-full max-w-107.5 rounded-t-2xl p-4 max-h-[85vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 z-[60] flex items-end">
+      <div className="bg-white dark:bg-slate-900 w-full max-w-107.5 rounded-t-2xl p-4 pb-24 max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4 sticky top-0 bg-white dark:bg-slate-900 pb-4 border-b border-slate-200 dark:border-slate-700">
           <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Edit Birthdays</h2>
           <button

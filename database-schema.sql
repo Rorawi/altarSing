@@ -194,3 +194,67 @@ ALTER TABLE rehearsal_songs
 
 -- Per-song service moment tag (carries through to service log as a tag)
 ALTER TABLE rehearsal_songs ADD COLUMN IF NOT EXISTS service_moment TEXT;
+
+-- Optional lyrics per rehearsal song entry (used for unlinked/manual songs)
+ALTER TABLE rehearsal_songs ADD COLUMN IF NOT EXISTS lyrics TEXT;
+
+-- =====================================================
+-- Migration: Song Leader per rehearsal song
+-- Run this AFTER the migrations above
+-- =====================================================
+
+-- Optional name of the person leading a specific song during rehearsal
+-- Optional: migrate any existing single leaders
+-- UPDATE rehearsal_songs SET song_leaders = ARRAY[song_leader] WHERE song_leader IS NOT NULL AND song_leader <> '';
+ALTER TABLE rehearsal_songs ADD COLUMN IF NOT EXISTS song_leader TEXT;
+
+-- =====================================================
+-- Migration: Song Leader per rehearsal song (multi-leader)
+-- Run this AFTER the migrations above
+-- =====================================================
+
+-- Array of song leader names per rehearsal song entry
+ALTER TABLE rehearsal_songs ADD COLUMN IF NOT EXISTS song_leaders TEXT[] NOT NULL DEFAULT '{}';
+-- Migrate existing single-leader data into the array
+UPDATE rehearsal_songs SET song_leaders = ARRAY[song_leader] WHERE song_leader IS NOT NULL AND song_leader <> '';
+-- Run this AFTER the migrations above
+-- =====================================================
+
+-- Named themed groups of songs for quick reference
+CREATE TABLE IF NOT EXISTS collections (
+  id          UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+  name        TEXT        NOT NULL,
+  description TEXT,
+  created_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+ALTER TABLE collections ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all on collections"
+  ON collections FOR ALL USING (true) WITH CHECK (true);
+
+-- Songs belonging to a collection.
+-- song_id is optional: NULL means a manually-added song not in the library.
+-- Song data (title, key, etc.) is stored as a snapshot at time of adding.
+CREATE TABLE IF NOT EXISTS collection_songs (
+  id                UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+  collection_id     UUID        NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+  song_id           UUID        REFERENCES songs(id) ON DELETE SET NULL,
+  song_title        TEXT        NOT NULL,
+  song_key          TEXT,
+  song_notes        TEXT,
+  song_youtube_link TEXT,
+  position          INTEGER     NOT NULL DEFAULT 1,
+  created_at        TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+ALTER TABLE collection_songs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all on collection_songs"
+  ON collection_songs FOR ALL USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_collection_songs_collection
+  ON collection_songs(collection_id, position);
+
+-- Prevent the same library song appearing twice in the same collection
+CREATE UNIQUE INDEX IF NOT EXISTS idx_collection_songs_unique_song
+  ON collection_songs(collection_id, song_id)
+  WHERE song_id IS NOT NULL;

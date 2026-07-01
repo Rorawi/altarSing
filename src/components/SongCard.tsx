@@ -10,11 +10,19 @@ import {
   CATEGORY_COLORS,
 } from '@/lib/constants';
 import { updateRehearsalStatus, deleteSong } from '@/lib/actions';
+import LyricsModal from '@/components/LyricsModal';
 
-export default function SongCard({ song }: { song: Song }) {
+export default function SongCard({
+  song,
+  onAddToCollection,
+}: {
+  song: Song;
+  onAddToCollection?: () => void;
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [lyricsOpen, setLyricsOpen] = useState(false);
 
   function handleStatusChange(status: string) {
     startTransition(async () => {
@@ -99,6 +107,24 @@ export default function SongCard({ song }: { song: Song }) {
             {statusLabel}
           </span>
           <div className="ml-auto flex items-center gap-2">
+            {onAddToCollection && (
+              <button
+                onClick={onAddToCollection}
+                className="text-xs text-violet-500 hover:text-violet-700 dark:hover:text-violet-300 font-medium transition-colors"
+                title="Add to a collection"
+              >
+                + Collection
+              </button>
+            )}
+            {song.lyrics && (
+              <button
+                onClick={() => setLyricsOpen(true)}
+                className="text-xs text-slate-400 hover:text-violet-500 dark:hover:text-violet-300 font-medium transition-colors"
+                title="View lyrics"
+              >
+                Lyrics
+              </button>
+            )}
             {song.rehearsal_status !== 'rehearsing' && (
               <button
                 onClick={() => handleStatusChange('rehearsing')}
@@ -129,6 +155,14 @@ export default function SongCard({ song }: { song: Song }) {
           </div>
         </div>
       </div>
+
+      <LyricsModal
+        isOpen={lyricsOpen}
+        onClose={() => setLyricsOpen(false)}
+        songTitle={song.title}
+        songId={song.id}
+        initialLyrics={song.lyrics}
+      />
 
       {/* Delete area */}
       {showDeleteConfirm ? (

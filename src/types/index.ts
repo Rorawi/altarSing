@@ -8,6 +8,7 @@ export interface Song {
   musical_key: string | null;
   tempo: string | null;
   notes: string | null;
+  lyrics: string | null;
   rehearsal_status: RehearsalStatus;
   created_at: string;
 }
@@ -91,7 +92,9 @@ export interface RehearsalSong {
   modulation_to: string | null;
   harmony_notes: string | null;
   arrangement_notes: string | null;
+  lyrics: string | null;
   run_throughs: number;
+  song_leaders: string[];
   medley_group_id: string | null;
   service_moment: string | null;
   created_at: string;
@@ -114,4 +117,36 @@ export interface HarmonyPattern {
 
 export interface RehearsalSessionWithSongs extends RehearsalSession {
   rehearsal_songs: Pick<RehearsalSong, 'id' | 'song_title' | 'key_used' | 'position'>[];
+}
+
+// ─── COLLECTIONS ─────────────────────────────────────────────────────────────
+
+export interface SongCollection {
+  id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+}
+
+export interface CollectionSong {
+  id: string;
+  collection_id: string;
+  song_id: string | null;
+  song_title: string;
+  song_key: string | null;
+  song_notes: string | null;
+  song_youtube_link: string | null;
+  position: number;
+  created_at: string;
+}
+
+export interface CollectionWithSongs extends SongCollection {
+  collection_songs: CollectionSong[];
+}
+
+// Lightweight shape used in rehearsal song pickers
+export interface CollectionForPicker {
+  id: string;
+  name: string;
+  songs: { id: string; song_title: string; song_id: string | null; song_key: string | null }[];
 }

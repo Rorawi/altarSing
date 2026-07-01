@@ -197,6 +197,21 @@ export default function SongForm({
         />
       </div>
 
+      {/* Lyrics */}
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+          Lyrics{' '}
+          <span className="text-slate-400 font-normal text-xs">(optional)</span>
+        </label>
+        <textarea
+          name="lyrics"
+          defaultValue={initialData?.lyrics ?? ''}
+          rows={10}
+          placeholder="Paste or type the song lyrics here…"
+          className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-y font-mono leading-relaxed"
+        />
+      </div>
+
       {/* Actions */}
       <div className="flex gap-3 pt-1">
         <button

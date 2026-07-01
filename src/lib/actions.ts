@@ -15,6 +15,7 @@ export async function addSong(formData: FormData) {
     musical_key: (formData.get('musical_key') as string) || null,
     tempo: (formData.get('tempo') as string) || null,
     notes: (formData.get('notes') as string)?.trim() || null,
+    lyrics: (formData.get('lyrics') as string)?.trim() || null,
     rehearsal_status: 'none',
   });
 
@@ -36,6 +37,7 @@ export async function updateSong(id: string, formData: FormData) {
       musical_key: (formData.get('musical_key') as string) || null,
       tempo: (formData.get('tempo') as string) || null,
       notes: (formData.get('notes') as string)?.trim() || null,
+      lyrics: (formData.get('lyrics') as string)?.trim() || null,
       rehearsal_status: (formData.get('rehearsal_status') as string) || 'none',
     })
     .eq('id', id);
@@ -64,6 +66,61 @@ export async function updateRehearsalStatus(id: string, status: string) {
     .eq('id', id);
   if (error) throw new Error(error.message);
   revalidatePath('/library');
+  revalidatePath('/rehearsal');
+}
+
+export async function getSongLyrics(songId: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('songs')
+    .select('lyrics')
+    .eq('id', songId)
+    .single();
+  return data?.lyrics ?? null;
+}
+
+export async function updateSongLyrics(songId: string, lyrics: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('songs')
+    .update({ lyrics: lyrics.trim() || null })
+    .eq('id', songId);
+  if (error) throw new Error(error.message);
+  revalidatePath('/library');
+}
+
+export async function getRehearsalSongLyrics(rehearsalSongId: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('rehearsal_songs')
+    .select('lyrics')
+    .eq('id', rehearsalSongId)
+    .single();
+  if (error) {
+    if (error.message.toLowerCase().includes("could not find the 'lyrics' column")) {
+      throw new Error(
+        "Database migration required: add rehearsal_songs.lyrics column (ALTER TABLE rehearsal_songs ADD COLUMN IF NOT EXISTS lyrics TEXT;)",
+      );
+    }
+    throw new Error(error.message);
+  }
+  return data?.lyrics ?? null;
+}
+
+export async function updateRehearsalSongLyrics(rehearsalSongId: string, lyrics: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('rehearsal_songs')
+    .update({ lyrics: lyrics.trim() || null })
+    .eq('id', rehearsalSongId);
+  if (error) {
+    if (error.message.toLowerCase().includes("could not find the 'lyrics' column")) {
+      throw new Error(
+        "Database migration required: add rehearsal_songs.lyrics column (ALTER TABLE rehearsal_songs ADD COLUMN IF NOT EXISTS lyrics TEXT;)",
+      );
+    }
+    throw new Error(error.message);
+  }
   revalidatePath('/rehearsal');
 }
 
@@ -179,6 +236,7 @@ export async function addRehearsalSong(
     arrangement_notes: string | null;
     run_throughs: number;
     service_moment: string | null;
+    song_leaders: string[];
   },
 ) {
   const supabase = await createClient();
@@ -325,6 +383,7 @@ export async function updateRehearsalSong(
     harmony_notes: string | null;
     arrangement_notes: string | null;
     service_moment: string | null;
+    song_leaders: string[];
   },
 ) {
   const supabase = await createClient();
@@ -397,6 +456,7 @@ export async function addSongToMedley(
     arrangement_notes: string | null;
     run_throughs: number;
     service_moment: string | null;
+    song_leaders: string[];
   },
 ) {
   const supabase = await createClient();
@@ -449,4 +509,73 @@ export async function reorderSongsInMedley(
     ),
   );
   revalidatePath(`/rehearsal/${sessionId}`);
+}
+
+// ─── COLLECTIONS ──────────────────────────────────────────────────────────────
+
+export async function createCollection(
+  name: string,
+  description: string | null,
+): Promise<string> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('collections')
+    .insert({ name: name.trim(), description: description?.trim() || null })
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+  revalidatePath('/library');
+  return data.id;
+}
+
+export async function updateCollection(
+  id: string,
+  name: string,
+  description: string | null,
+) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('collections')
+    .update({ name: name.trim(), description: description?.trim() || null })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/library');
+}
+
+export async function deleteCollection(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from('collections').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/library');
+}
+
+export async function addSongToCollection(
+  collectionId: string,
+  data: {
+    song_id: string | null;
+    song_title: string;
+    song_key: string | null;
+    song_notes: string | null;
+    song_youtube_link: string | null;
+  },
+) {
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from('collection_songs')
+    .select('*', { count: 'exact', head: true })
+    .eq('collection_id', collectionId);
+  const { error } = await supabase.from('collection_songs').insert({
+    collection_id: collectionId,
+    position: (count ?? 0) + 1,
+    ...data,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath('/library');
+}
+
+export async function removeFromCollection(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from('collection_songs').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/library');
 }

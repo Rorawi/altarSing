@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import type { ServiceLog, LogSong } from "@/types";
+import LyricsModal from "@/components/LyricsModal";
 
 export default function LogEntryCard({ log }: { log: ServiceLog }) {
   const formattedDate = new Date(
@@ -24,6 +26,8 @@ export default function LogEntryCard({ log }: { log: ServiceLog }) {
       : log.lead_singer
         ? [log.lead_singer]
         : [];
+
+  const [lyricsTarget, setLyricsTarget] = useState<{ title: string; songId: string | null } | null>(null);
 
   return (
     <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4">
@@ -55,6 +59,12 @@ export default function LogEntryCard({ log }: { log: ServiceLog }) {
                     {song.key}
                   </span>
                 )}
+                <button
+                  onClick={() => setLyricsTarget({ title: song.title, songId: song.song_id })}
+                  className="text-xs text-slate-400 hover:text-violet-500 dark:hover:text-violet-400 font-medium shrink-0 transition-colors"
+                >
+                  Lyrics
+                </button>
               </div>
               {song.tags && song.tags.length > 0 && (
                 <div
@@ -88,6 +98,12 @@ export default function LogEntryCard({ log }: { log: ServiceLog }) {
           </p>
         )}
       </div>
+      <LyricsModal
+        isOpen={!!lyricsTarget}
+        onClose={() => setLyricsTarget(null)}
+        songTitle={lyricsTarget?.title ?? ''}
+        songId={lyricsTarget?.songId}
+      />
     </div>
   );
 }

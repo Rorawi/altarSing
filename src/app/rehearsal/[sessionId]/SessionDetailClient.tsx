@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -19,7 +19,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { RehearsalSession, RehearsalSong, RehearsalMedleyGroup } from '@/types';
+import type { RehearsalSession, RehearsalSong, RehearsalMedleyGroup, CollectionForPicker } from '@/types';
 import {
   addRehearsalSong,
   deleteRehearsalSong,
@@ -33,6 +33,7 @@ import {
   reorderSongsInMedley,
 } from '@/lib/actions';
 import { MUSICAL_KEYS, SERVICE_MOMENTS } from '@/lib/constants';
+import LyricsModal from '@/components/LyricsModal';
 
 // ─── Types & Helpers ──────────────────────────────────────────────────────────
 
@@ -41,6 +42,11 @@ type MedleyData = RehearsalMedleyGroup & { songs: RehearsalSong[] };
 type SessionItem =
   | { itemType: 'song'; id: string; position: number; data: RehearsalSong }
   | { itemType: 'medley'; id: string; position: number; data: MedleyData };
+
+type Member = { id: string; name: string };
+const MembersContext = createContext<Member[]>([]);
+
+const CollectionsContext = createContext<CollectionForPicker[]>([]);
 
 function buildSessionItems(
   songs: RehearsalSong[],
@@ -70,11 +76,15 @@ export default function SessionDetailClient({
   songs,
   medleyGroups,
   librarySongs,
+  members,
+  collections,
 }: {
   session: RehearsalSession;
   songs: RehearsalSong[];
   medleyGroups: RehearsalMedleyGroup[];
   librarySongs: LibrarySong[];
+  members: Member[];
+  collections: CollectionForPicker[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -199,6 +209,8 @@ export default function SessionDetailClient({
   const isEmpty = sessionItems.length === 0 && !addMode;
 
   return (
+    <MembersContext.Provider value={members}>
+    <CollectionsContext.Provider value={collections}>
     <div>
       {/* Header */}
       <div className="flex items-start gap-3 mb-5">
@@ -431,6 +443,8 @@ export default function SessionDetailClient({
         </DndContext>
       )}
     </div>
+    </CollectionsContext.Provider>
+    </MembersContext.Provider>
   );
 }
 
@@ -514,7 +528,21 @@ function StandaloneSongCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [lyricsOpen, setLyricsOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const hasDetails = song.harmony_notes || song.arrangement_notes;
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    if (menuOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [menuOpen]);
 
   if (editing) {
     return (
@@ -528,14 +556,15 @@ function StandaloneSongCard({
   }
 
   return (
-    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden">
+    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-visible">
       <div className="p-4">
-        <div className="flex items-start gap-3">
+        {/* Top row: drag, position, title, menu */}
+        <div className="flex items-center gap-3 mb-2">
           <button
             type="button"
             {...dragListeners}
             {...dragAttributes}
-            className="shrink-0 mt-0.5 cursor-grab active:cursor-grabbing touch-none text-slate-300 dark:text-slate-600 hover:text-slate-400 dark:hover:text-slate-500 p-0.5"
+            className="shrink-0 cursor-grab active:cursor-grabbing touch-none text-slate-300 dark:text-slate-600 hover:text-slate-400 dark:hover:text-slate-500 p-0.5"
             title="Drag to reorder"
           >
             <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
@@ -544,61 +573,86 @@ function StandaloneSongCard({
               <circle cx="5" cy="12" r="1.5" /><circle cx="11" cy="12" r="1.5" />
             </svg>
           </button>
-          <span className="shrink-0 w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 text-xs font-bold flex items-center justify-center mt-0.5">
+          <span className="shrink-0 w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 text-xs font-bold flex items-center justify-center">
             {position}
           </span>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm leading-snug">
-              {song.song_title}
-            </p>
-            <div className="flex flex-wrap items-center gap-2 mt-1.5">
-              {song.key_used && (
-                <span className="bg-violet-600 text-white text-xs font-bold px-2 py-0.5 rounded-lg">
-                  {song.key_used}
-                </span>
-              )}
-              {song.run_throughs > 1 && (
-                <span className="text-xs text-slate-500 dark:text-slate-400">
-                  × {song.run_throughs} run-throughs
-                </span>
-              )}
-              {song.run_throughs === 1 && (
-                <span className="text-xs text-slate-400 dark:text-slate-500">× 1 run-through</span>
-              )}
-              {song.service_moment && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 font-medium border border-violet-200 dark:border-violet-700">
-                  {song.service_moment}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {hasDetails && (
-              <button
-                onClick={() => setExpanded((v) => !v)}
-                className="text-xs text-violet-600 dark:text-violet-400 hover:underline"
-              >
-                {expanded ? 'Less' : 'Details'}
-              </button>
-            )}
+          <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm leading-snug flex-1 min-w-0 truncate">
+            {song.song_title}
+          </p>
+          {/* Three-dot menu */}
+          <div className="relative shrink-0" ref={menuRef}>
             <button
-              onClick={() => setEditing(true)}
-              className="text-slate-400 dark:text-slate-500 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
-              title="Edit song"
+              onClick={() => setMenuOpen((v) => !v)}
+              className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 p-1 transition-colors"
+              title="More options"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <circle cx="12" cy="5" r="1.5" />
+                <circle cx="12" cy="12" r="1.5" />
+                <circle cx="12" cy="19" r="1.5" />
               </svg>
             </button>
-            <button
-              onClick={() => onDelete(song.id, song.song_title)}
-              disabled={isPending}
-              className="text-slate-300 dark:text-slate-600 hover:text-red-400 transition-colors text-lg leading-none disabled:opacity-50"
-              title="Remove from session"
-            >
-              ×
-            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-8 z-50 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl shadow-lg overflow-hidden min-w-40">
+                {hasDetails && (
+                  <button
+                    onClick={() => { setExpanded((v) => !v); setMenuOpen(false); }}
+                    className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors border-b border-slate-100 dark:border-slate-600"
+                  >
+                    {expanded ? 'Hide Details' : 'Show Details'}
+                  </button>
+                )}
+                <button
+                  onClick={() => { setEditing(true); setMenuOpen(false); }}
+                  className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors border-b border-slate-100 dark:border-slate-600"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => { onDelete(song.id, song.song_title); setMenuOpen(false); }}
+                  disabled={isPending}
+                  className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* Bottom row: key, run-throughs, leaders, lyrics pill */}
+        <div className="flex items-center gap-2 mt-2 ml-10 flex-wrap">
+          {song.key_used && (
+            <span className="bg-violet-600 text-white text-xs font-bold px-2 py-0.5 rounded-lg">
+              {song.key_used}
+            </span>
+          )}
+          {song.run_throughs > 1 && (
+            <span className="text-xs text-slate-500 dark:text-slate-400">
+              × {song.run_throughs}
+            </span>
+          )}
+          {song.run_throughs === 1 && (
+            <span className="text-xs text-slate-400 dark:text-slate-500">× 1</span>
+          )}
+          {song.song_leaders && song.song_leaders.length > 0 && (
+            <span className="text-xs text-slate-500 dark:text-slate-400">
+              Led by: <span className="font-medium text-slate-600 dark:text-slate-300">{song.song_leaders.join(', ')}</span>
+            </span>
+          )}
+          {song.service_moment && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 font-medium border border-violet-200 dark:border-violet-700">
+              {song.service_moment}
+            </span>
+          )}
+          {/* Lyrics pill button */}
+          <button
+            onClick={() => setLyricsOpen(true)}
+            className="ml-auto px-3 py-1 border border-violet-200 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 rounded-full text-xs font-medium hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-colors flex items-center gap-1 shrink-0"
+            title="View lyrics"
+          >
+            <span>🎵</span> Lyrics
+          </button>
         </div>
 
         {expanded && hasDetails && (
@@ -618,6 +672,13 @@ function StandaloneSongCard({
           </div>
         )}
       </div>
+      <LyricsModal
+        isOpen={lyricsOpen}
+        onClose={() => setLyricsOpen(false)}
+        songTitle={song.song_title}
+        songId={song.song_id}
+        rehearsalSongId={song.id}
+      />
     </div>
   );
 }
@@ -889,7 +950,21 @@ function MedleySongCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [lyricsOpen, setLyricsOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const hasDetails = song.harmony_notes || song.arrangement_notes;
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    if (menuOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [menuOpen]);
 
   if (editing) {
     return (
@@ -903,9 +978,10 @@ function MedleySongCard({
   }
 
   return (
-    <div className="bg-white dark:bg-slate-800 border border-amber-100 dark:border-amber-800/40 rounded-xl overflow-hidden">
+    <div className="bg-white dark:bg-slate-800 border border-amber-100 dark:border-amber-800/40 rounded-xl overflow-visible">
       <div className="px-3 py-2.5">
-        <div className="flex items-center gap-2">
+        {/* Top row: drag, position, title, menu */}
+        <div className="flex items-center gap-2 mb-1.5">
           <button
             type="button"
             {...dragListeners}
@@ -922,55 +998,80 @@ function MedleySongCard({
           <span className="shrink-0 w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-800/40 text-amber-700 dark:text-amber-300 text-[10px] font-bold flex items-center justify-center">
             {position}
           </span>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-slate-800 dark:text-slate-100 text-sm leading-snug truncate">
-              {song.song_title}
-            </p>
-            <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-              {song.key_used && (
-                <span className="bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">
-                  {song.key_used}
-                </span>
-              )}
-              {song.run_throughs > 0 && (
-                <span className="text-[11px] text-slate-400 dark:text-slate-500">
-                  × {song.run_throughs}
-                </span>
-              )}
-              {song.service_moment && (
-                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-medium border border-amber-200 dark:border-amber-700">
-                  {song.service_moment}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {hasDetails && (
-              <button
-                onClick={() => setExpanded((v) => !v)}
-                className="text-xs text-amber-600 dark:text-amber-400 hover:underline"
-              >
-                {expanded ? 'Less' : 'Details'}
-              </button>
-            )}
+          <p className="font-semibold text-slate-800 dark:text-slate-100 text-sm leading-snug flex-1 min-w-0 truncate">
+            {song.song_title}
+          </p>
+          {/* Three-dot menu */}
+          <div className="relative shrink-0" ref={menuRef}>
             <button
-              onClick={() => setEditing(true)}
-              className="text-slate-300 dark:text-slate-600 hover:text-amber-500 transition-colors"
-              title="Edit song"
+              onClick={() => setMenuOpen((v) => !v)}
+              className="text-amber-300 dark:text-amber-700 hover:text-amber-700 dark:hover:text-amber-400 p-0.5 transition-colors"
+              title="More options"
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <circle cx="12" cy="5" r="1.5" />
+                <circle cx="12" cy="12" r="1.5" />
+                <circle cx="12" cy="19" r="1.5" />
               </svg>
             </button>
-            <button
-              onClick={() => onDelete(song.id, song.song_title)}
-              disabled={isPending}
-              className="text-slate-200 dark:text-slate-700 hover:text-red-400 transition-colors text-base leading-none disabled:opacity-50"
-              title="Remove from medley"
-            >
-              ×
-            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-6 z-50 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl shadow-lg overflow-hidden min-w-40">
+                {hasDetails && (
+                  <button
+                    onClick={() => { setExpanded((v) => !v); setMenuOpen(false); }}
+                    className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors border-b border-slate-100 dark:border-slate-600"
+                  >
+                    {expanded ? 'Hide Details' : 'Show Details'}
+                  </button>
+                )}
+                <button
+                  onClick={() => { setEditing(true); setMenuOpen(false); }}
+                  className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors border-b border-slate-100 dark:border-slate-600"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => { onDelete(song.id, song.song_title); setMenuOpen(false); }}
+                  disabled={isPending}
+                  className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* Bottom row: key, run-throughs, leaders, lyrics pill */}
+        <div className="flex items-center gap-1.5 mt-1 ml-8 flex-wrap">
+          {song.key_used && (
+            <span className="bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">
+              {song.key_used}
+            </span>
+          )}
+          {song.run_throughs > 0 && (
+            <span className="text-[11px] text-slate-400 dark:text-slate-500">
+              × {song.run_throughs}
+            </span>
+          )}
+          {song.song_leaders && song.song_leaders.length > 0 && (
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+              Led by: <span className="font-medium text-slate-600 dark:text-slate-300">{song.song_leaders.join(', ')}</span>
+            </span>
+          )}
+          {song.service_moment && (
+            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-medium border border-amber-200 dark:border-amber-700">
+              {song.service_moment}
+            </span>
+          )}
+          {/* Lyrics pill button */}
+          <button
+            onClick={() => setLyricsOpen(true)}
+            className="ml-auto px-2 py-0.5 border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 rounded-full text-[10px] font-medium hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors flex items-center gap-1 shrink-0"
+            title="View lyrics"
+          >
+            🎵 Lyrics
+          </button>
         </div>
 
         {expanded && hasDetails && (
@@ -990,6 +1091,13 @@ function MedleySongCard({
           </div>
         )}
       </div>
+      <LyricsModal
+        isOpen={lyricsOpen}
+        onClose={() => setLyricsOpen(false)}
+        songTitle={song.song_title}
+        songId={song.song_id}
+        rehearsalSongId={song.id}
+      />
     </div>
   );
 }
@@ -1097,6 +1205,93 @@ function CreateMedleyForm({
   );
 }
 
+// ─── Song Leader Autocomplete Input ──────────────────────────────────────────
+
+function SongLeaderInput({
+  values,
+  onChange,
+}: {
+  values: string[];
+  onChange: (vals: string[]) => void;
+}) {
+  const members = useContext(MembersContext);
+  const [inputValue, setInputValue] = useState('');
+  const [open, setOpen] = useState(false);
+
+  const filtered = members.filter(
+    (m) =>
+      !values.includes(m.name) &&
+      m.name.toLowerCase().includes(inputValue.toLowerCase()),
+  );
+
+  function addLeader(name: string) {
+    const trimmed = name.trim();
+    if (trimmed && !values.includes(trimmed)) onChange([...values, trimmed]);
+    setInputValue('');
+    setOpen(false);
+  }
+
+  function removeLeader(name: string) {
+    onChange(values.filter((v) => v !== name));
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      if (inputValue.trim()) addLeader(inputValue);
+    } else if (e.key === 'Backspace' && !inputValue && values.length > 0) {
+      removeLeader(values[values.length - 1]);
+    }
+  }
+
+  return (
+    <div className="relative">
+      <div className="flex flex-wrap gap-1.5 min-h-9.5 w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-xl px-2.5 py-1.5 focus-within:ring-2 focus-within:ring-violet-500 cursor-text">
+        {values.map((v) => (
+          <span
+            key={v}
+            className="inline-flex items-center gap-1 bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 text-xs font-medium px-2 py-0.5 rounded-lg"
+          >
+            {v}
+            <button
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); removeLeader(v); }}
+              className="text-violet-400 hover:text-violet-700 dark:hover:text-violet-100 leading-none"
+            >
+              ×
+            </button>
+          </span>
+        ))}
+        <input
+          type="text"
+          value={inputValue}
+          onChange={(e) => { setInputValue(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          onKeyDown={handleKeyDown}
+          placeholder={values.length === 0 ? 'Add leader name…' : ''}
+          autoComplete="off"
+          className="flex-1 min-w-25 bg-transparent text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none"
+        />
+      </div>
+      {open && filtered.length > 0 && (
+        <div className="absolute z-20 left-0 right-0 mt-1 border border-slate-200 dark:border-slate-600 rounded-xl overflow-hidden max-h-40 overflow-y-auto shadow-lg bg-white dark:bg-slate-800">
+          {filtered.slice(0, 6).map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onMouseDown={() => addLeader(m.name)}
+              className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-violet-50 dark:hover:bg-violet-900/20 border-b border-slate-100 dark:border-slate-700 last:border-0"
+            >
+              {m.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Inline Edit Song Form ────────────────────────────────────────────────────
 
 function EditSongForm({
@@ -1117,6 +1312,7 @@ function EditSongForm({
   const [harmonyNotes, setHarmonyNotes] = useState(song.harmony_notes ?? '');
   const [arrangementNotes, setArrangementNotes] = useState(song.arrangement_notes ?? '');
   const [serviceMoment, setServiceMoment] = useState(song.service_moment ?? '');
+  const [songLeaders, setSongLeaders] = useState<string[]>(song.song_leaders ?? []);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -1129,6 +1325,7 @@ function EditSongForm({
         harmony_notes: harmonyNotes.trim() || null,
         arrangement_notes: arrangementNotes.trim() || null,
         service_moment: serviceMoment || null,
+        song_leaders: songLeaders,
       });
       onDone();
     });
@@ -1182,6 +1379,13 @@ function EditSongForm({
           {SERVICE_MOMENTS.map((m) => <option key={m} value={m}>{m}</option>)}
         </select>
       </div>
+      <div>
+        <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Song Leaders <span className="font-normal">(optional)</span></label>
+        <SongLeaderInput
+          values={songLeaders}
+          onChange={setSongLeaders}
+        />
+      </div>
       <div className="flex gap-2 pt-1">
         <button type="button" onClick={onCancel}
           className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-xl py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700">
@@ -1219,10 +1423,23 @@ function AddSongForm({
   const [harmonyNotes, setHarmonyNotes] = useState('');
   const [arrangementNotes, setArrangementNotes] = useState('');
   const [serviceMoment, setServiceMoment] = useState('');
+  const [songLeaders, setSongLeaders] = useState<string[]>([]);
+  const [collectionFilter, setCollectionFilter] = useState('');
 
-  const filteredLibrary = librarySearch.trim()
-    ? librarySongs.filter((s) => s.title.toLowerCase().includes(librarySearch.toLowerCase()))
-    : librarySongs;
+  const collections = useContext(CollectionsContext);
+  const activeCollection = collections.find((c) => c.id === collectionFilter) ?? null;
+
+  const filteredLibrary = (() => {
+    let list = librarySongs;
+    if (activeCollection) {
+      const ids = new Set(activeCollection.songs.map((s) => s.song_id).filter(Boolean));
+      list = list.filter((s) => ids.has(s.id));
+    }
+    if (librarySearch.trim()) {
+      list = list.filter((s) => s.title.toLowerCase().includes(librarySearch.toLowerCase()));
+    }
+    return list;
+  })();
 
   function handleSelectLibrarySong(song: LibrarySong) {
     setSelectedSong(song);
@@ -1246,6 +1463,7 @@ function AddSongForm({
         arrangement_notes: arrangementNotes.trim() || null,
         run_throughs: runThroughs,
         service_moment: serviceMoment || null,
+        song_leaders: songLeaders,
       });
       onAdded();
     });
@@ -1274,13 +1492,27 @@ function AddSongForm({
 
       {useLibrary ? (
         <div>
+          {collections.length > 0 && (
+            <div className="mb-2">
+              <select
+                value={collectionFilter}
+                onChange={(e) => { setCollectionFilter(e.target.value); setSelectedSong(null); setLibrarySearch(''); }}
+                className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-violet-400"
+              >
+                <option value="">All songs</option>
+                {collections.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Search Library</label>
           <input type="text" value={librarySearch}
             onChange={(e) => { setLibrarySearch(e.target.value); setSelectedSong(null); }}
-            placeholder="Type to search your song library…"
+            placeholder={activeCollection ? `Search in "${activeCollection.name}"…` : 'Type to search your song library…'}
             className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
           />
-          {librarySearch && !selectedSong && filteredLibrary.length > 0 && (
+          {(librarySearch || activeCollection) && !selectedSong && filteredLibrary.length > 0 && (
             <div className="mt-1 border border-slate-200 dark:border-slate-600 rounded-xl overflow-hidden max-h-48 overflow-y-auto">
               {filteredLibrary.slice(0, 8).map((song) => (
                 <button key={song.id} type="button" onClick={() => handleSelectLibrarySong(song)}
@@ -1362,6 +1594,16 @@ function AddSongForm({
         </select>
       </div>
 
+      <div>
+        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+          Song Leaders <span className="text-slate-400 font-normal">(optional)</span>
+        </label>
+        <SongLeaderInput
+          values={songLeaders}
+          onChange={setSongLeaders}
+        />
+      </div>
+
       <button type="submit"
         disabled={isPending || (useLibrary ? !selectedSong && !librarySearch.trim() : !manualTitle.trim())}
         className="w-full bg-violet-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors disabled:opacity-50">
@@ -1398,10 +1640,23 @@ function AddSongToMedleyForm({
   const [harmonyNotes, setHarmonyNotes] = useState('');
   const [arrangementNotes, setArrangementNotes] = useState('');
   const [serviceMoment, setServiceMoment] = useState('');
+  const [songLeaders, setSongLeaders] = useState<string[]>([]);
+  const [collectionFilter, setCollectionFilter] = useState('');
 
-  const filteredLibrary = librarySearch.trim()
-    ? librarySongs.filter((s) => s.title.toLowerCase().includes(librarySearch.toLowerCase()))
-    : librarySongs;
+  const collections = useContext(CollectionsContext);
+  const activeCollection = collections.find((c) => c.id === collectionFilter) ?? null;
+
+  const filteredLibrary = (() => {
+    let list = librarySongs;
+    if (activeCollection) {
+      const ids = new Set(activeCollection.songs.map((s) => s.song_id).filter(Boolean));
+      list = list.filter((s) => ids.has(s.id));
+    }
+    if (librarySearch.trim()) {
+      list = list.filter((s) => s.title.toLowerCase().includes(librarySearch.toLowerCase()));
+    }
+    return list;
+  })();
 
   function handleSelectLibrarySong(song: LibrarySong) {
     setSelectedSong(song);
@@ -1424,6 +1679,7 @@ function AddSongToMedleyForm({
         arrangement_notes: arrangementNotes.trim() || null,
         run_throughs: runThroughs,
         service_moment: serviceMoment || null,
+        song_leaders: songLeaders,
       });
       onAdded();
     });
@@ -1450,12 +1706,26 @@ function AddSongToMedleyForm({
 
       {useLibrary ? (
         <div>
+          {collections.length > 0 && (
+            <div className="mb-1.5">
+              <select
+                value={collectionFilter}
+                onChange={(e) => { setCollectionFilter(e.target.value); setSelectedSong(null); setLibrarySearch(''); }}
+                className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400"
+              >
+                <option value="">All songs</option>
+                {collections.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <input type="text" value={librarySearch}
             onChange={(e) => { setLibrarySearch(e.target.value); setSelectedSong(null); }}
-            placeholder="Search library…"
+            placeholder={activeCollection ? `"${activeCollection.name}"…` : 'Search library…'}
             className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
-          {librarySearch && !selectedSong && filteredLibrary.length > 0 && (
+          {(librarySearch || activeCollection) && !selectedSong && filteredLibrary.length > 0 && (
             <div className="mt-1 border border-slate-200 dark:border-slate-600 rounded-xl overflow-hidden max-h-40 overflow-y-auto">
               {filteredLibrary.slice(0, 6).map((song) => (
                 <button key={song.id} type="button" onClick={() => handleSelectLibrarySong(song)}
@@ -1525,6 +1795,14 @@ function AddSongToMedleyForm({
           <option value="">— None —</option>
           {SERVICE_MOMENTS.map((m) => <option key={m} value={m}>{m}</option>)}
         </select>
+      </div>
+
+      <div>
+        <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">Song Leaders <span className="font-normal">(optional)</span></label>
+        <SongLeaderInput
+          values={songLeaders}
+          onChange={setSongLeaders}
+        />
       </div>
 
       <button type="submit"
