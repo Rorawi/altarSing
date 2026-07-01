@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useRef, type ReactNode } from 'react';
 import {
+  getCollectionSongLyrics,
   getSongLyrics,
   getRehearsalSongLyrics,
+  updateCollectionSongLyrics,
   updateSongLyrics,
   updateRehearsalSongLyrics,
 } from '@/lib/actions';
@@ -16,6 +18,8 @@ interface LyricsModalProps {
   songId?: string | null;
   /** Rehearsal song row ID used to fetch / save lyrics for unlinked session songs. */
   rehearsalSongId?: string | null;
+  /** Collection song row ID used to fetch / save lyrics for unlinked collection songs. */
+  collectionSongId?: string | null;
   /** Pre-loaded lyrics (skips fetch). Pass `null` explicitly to mean "no lyrics". Omit to trigger fetch. */
   initialLyrics?: string | null;
 }
@@ -109,6 +113,7 @@ export default function LyricsModal({
   songTitle,
   songId,
   rehearsalSongId,
+  collectionSongId,
   initialLyrics,
 }: LyricsModalProps) {
   const [lyrics, setLyrics] = useState<string | null>(null);
@@ -226,14 +231,30 @@ export default function LyricsModal({
     }
 
     // Fallback: fetch rehearsal-specific lyrics for unlinked songs
-    if (!rehearsalSongId) {
+    if (rehearsalSongId) {
+      setLoading(true);
+      setErrorMessage(null);
+      getRehearsalSongLyrics(rehearsalSongId)
+        .then((l) => {
+          setLyrics(l);
+        })
+        .catch((e: unknown) => {
+          setErrorMessage(e instanceof Error ? e.message : 'Failed to load lyrics.');
+          setLyrics(null);
+        })
+        .finally(() => setLoading(false));
+      return;
+    }
+
+    // Fallback: fetch collection-specific lyrics for unlinked songs
+    if (!collectionSongId) {
       setLyrics(null);
       return;
     }
 
     setLoading(true);
     setErrorMessage(null);
-    getRehearsalSongLyrics(rehearsalSongId)
+    getCollectionSongLyrics(collectionSongId)
       .then((l) => {
         setLyrics(l);
       })
@@ -242,7 +263,7 @@ export default function LyricsModal({
         setLyrics(null);
       })
       .finally(() => setLoading(false));
-  }, [isOpen, songId, rehearsalSongId, initialLyrics]);
+  }, [isOpen, songId, rehearsalSongId, collectionSongId, initialLyrics]);
 
   async function handleCopy() {
     if (!lyrics) return;
@@ -256,7 +277,7 @@ export default function LyricsModal({
   }
 
   async function handleSave() {
-    if (!songId && !rehearsalSongId) return;
+    if (!songId && !rehearsalSongId && !collectionSongId) return;
     setSaving(true);
     setErrorMessage(null);
     try {
@@ -264,6 +285,8 @@ export default function LyricsModal({
         await updateSongLyrics(songId, editText);
       } else if (rehearsalSongId) {
         await updateRehearsalSongLyrics(rehearsalSongId, editText);
+      } else if (collectionSongId) {
+        await updateCollectionSongLyrics(collectionSongId, editText);
       }
       setLyrics(editText.trim() || null);
       setEditing(false);
@@ -458,7 +481,7 @@ export default function LyricsModal({
               <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
                 No lyrics added yet
               </p>
-              {!songId && !rehearsalSongId && (
+              {!songId && !rehearsalSongId && !collectionSongId && (
                 <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">
                   Edit this song in the Library to add lyrics
                 </p>
@@ -467,7 +490,7 @@ export default function LyricsModal({
           )}
 
           {/* Edit / Add lyrics action */}
-          {(songId || rehearsalSongId) && !loading && (
+          {(songId || rehearsalSongId || collectionSongId) && !loading && (
             <div className="mt-5">
               {editing ? (
                 <div className="flex gap-2">
@@ -496,7 +519,7 @@ export default function LyricsModal({
             </div>
           )}
 
-          {!songId && !rehearsalSongId && !loading && !editing && !lyrics && (
+          {!songId && !rehearsalSongId && !collectionSongId && !loading && !editing && !lyrics && (
             <p className="text-slate-400 dark:text-slate-500 text-xs mt-5 text-center">
               This song is not linked to Library or Rehearsal storage yet.
             </p>

@@ -258,3 +258,6 @@ CREATE INDEX IF NOT EXISTS idx_collection_songs_collection
 CREATE UNIQUE INDEX IF NOT EXISTS idx_collection_songs_unique_song
   ON collection_songs(collection_id, song_id)
   WHERE song_id IS NOT NULL;
+
+-- Optional lyrics per collection song entry (used for unlinked/manual songs)
+ALTER TABLE collection_songs ADD COLUMN IF NOT EXISTS lyrics TEXT;

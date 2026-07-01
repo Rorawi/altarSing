@@ -29,7 +29,11 @@ export default function CollectionsClient({
   const [listSearch, setListSearch] = useState('');
   const [detailSearch, setDetailSearch] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
-  const [lyricsTarget, setLyricsTarget] = useState<{ title: string; songId: string | null } | null>(null);
+  const [lyricsTarget, setLyricsTarget] = useState<{
+    title: string;
+    songId: string | null;
+    collectionSongId: string | null;
+  } | null>(null);
 
   const selected = selectedId ? (collections.find((c) => c.id === selectedId) ?? null) : null;
 
@@ -122,7 +126,13 @@ export default function CollectionsClient({
                       </a>
                     )}
                     <button
-                      onClick={() => setLyricsTarget({ title: song.song_title, songId: song.song_id })}
+                      onClick={() =>
+                        setLyricsTarget({
+                          title: song.song_title,
+                          songId: song.song_id,
+                          collectionSongId: song.id,
+                        })
+                      }
                       className="text-sm text-slate-500 hover:text-white font-medium transition-colors"
                     >
                       Lyrics
@@ -145,6 +155,7 @@ export default function CollectionsClient({
         onClose={() => setLyricsTarget(null)}
         songTitle={lyricsTarget?.title ?? ''}
         songId={lyricsTarget?.songId}
+        collectionSongId={lyricsTarget?.collectionSongId}
       />
       </>
     );
@@ -273,7 +284,13 @@ export default function CollectionsClient({
                       </a>
                     )}
                     <button
-                      onClick={() => setLyricsTarget({ title: song.song_title, songId: song.song_id })}
+                      onClick={() =>
+                        setLyricsTarget({
+                          title: song.song_title,
+                          songId: song.song_id,
+                          collectionSongId: song.id,
+                        })
+                      }
                       className="text-xs text-slate-400 dark:text-slate-500 hover:text-violet-500 dark:hover:text-violet-400 font-medium transition-colors"
                     >
                       Lyrics
@@ -330,6 +347,7 @@ export default function CollectionsClient({
         onClose={() => setLyricsTarget(null)}
         songTitle={lyricsTarget?.title ?? ''}
         songId={lyricsTarget?.songId}
+        collectionSongId={lyricsTarget?.collectionSongId}
       />
       </>
     );
@@ -450,6 +468,7 @@ export default function CollectionsClient({
       onClose={() => setLyricsTarget(null)}
       songTitle={lyricsTarget?.title ?? ''}
       songId={lyricsTarget?.songId}
+      collectionSongId={lyricsTarget?.collectionSongId}
     />
     </>
   );

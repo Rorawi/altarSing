@@ -135,6 +135,7 @@ export interface CollectionSong {
   song_title: string;
   song_key: string | null;
   song_notes: string | null;
+  lyrics: string | null;
   song_youtube_link: string | null;
   position: number;
   created_at: string;

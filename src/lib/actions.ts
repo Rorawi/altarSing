@@ -579,3 +579,38 @@ export async function removeFromCollection(id: string) {
   if (error) throw new Error(error.message);
   revalidatePath('/library');
 }
+
+export async function getCollectionSongLyrics(collectionSongId: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('collection_songs')
+    .select('lyrics')
+    .eq('id', collectionSongId)
+    .single();
+  if (error) {
+    if (error.message.toLowerCase().includes("could not find the 'lyrics' column")) {
+      throw new Error(
+        "Database migration required: add collection_songs.lyrics column (ALTER TABLE collection_songs ADD COLUMN IF NOT EXISTS lyrics TEXT;)",
+      );
+    }
+    throw new Error(error.message);
+  }
+  return data?.lyrics ?? null;
+}
+
+export async function updateCollectionSongLyrics(collectionSongId: string, lyrics: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('collection_songs')
+    .update({ lyrics: lyrics.trim() || null })
+    .eq('id', collectionSongId);
+  if (error) {
+    if (error.message.toLowerCase().includes("could not find the 'lyrics' column")) {
+      throw new Error(
+        "Database migration required: add collection_songs.lyrics column (ALTER TABLE collection_songs ADD COLUMN IF NOT EXISTS lyrics TEXT;)",
+      );
+    }
+    throw new Error(error.message);
+  }
+  revalidatePath('/library');
+}
