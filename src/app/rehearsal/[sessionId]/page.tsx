@@ -32,11 +32,20 @@ export default async function SessionDetailPage({
 
   if (!session) notFound();
 
-  const collections: CollectionForPicker[] = (collectionsRaw ?? []).map((c: Record<string, unknown>) => ({
-    id: c.id as string,
-    name: c.name as string,
-    songs: (c.collection_songs as Record<string, unknown>[]) ?? [],
-  }));
+  const collections: CollectionForPicker[] = (collectionsRaw ?? []).map((c: Record<string, unknown>) => {
+    const rawSongs = (c.collection_songs as Record<string, unknown>[] | null) ?? [];
+
+    return {
+      id: c.id as string,
+      name: c.name as string,
+      songs: rawSongs.map((s) => ({
+        id: s.id as string,
+        song_title: s.song_title as string,
+        song_id: (s.song_id as string | null) ?? null,
+        song_key: (s.song_key as string | null) ?? null,
+      })),
+    };
+  });
 
   return (
     <SessionDetailClient

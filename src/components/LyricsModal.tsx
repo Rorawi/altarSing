@@ -1,9 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkBreaks from 'remark-breaks';
-import remarkGfm from 'remark-gfm';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import {
   getSongLyrics,
   getRehearsalSongLyrics,
@@ -21,6 +18,89 @@ interface LyricsModalProps {
   rehearsalSongId?: string | null;
   /** Pre-loaded lyrics (skips fetch). Pass `null` explicitly to mean "no lyrics". Omit to trigger fetch. */
   initialLyrics?: string | null;
+}
+
+function escapeHtml(text: string) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function formatInline(text: string) {
+  return escapeHtml(text)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>');
+}
+
+function RenderFormattedLyrics({ text }: { text: string }) {
+  const lines = text.split('\n');
+  const blocks: ReactNode[] = [];
+  const listBuffer: string[] = [];
+
+  function flushList() {
+    if (listBuffer.length === 0) return;
+    blocks.push(
+      <ul key={`list-${blocks.length}`} className="list-disc pl-5 my-2 space-y-1 text-sm text-slate-700 dark:text-slate-200">
+        {listBuffer.map((item, i) => (
+          <li key={`${i}-${item.slice(0, 12)}`} dangerouslySetInnerHTML={{ __html: formatInline(item) }} />
+        ))}
+      </ul>,
+    );
+    listBuffer.length = 0;
+  }
+
+  lines.forEach((line) => {
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith('- ')) {
+      listBuffer.push(trimmed.slice(2));
+      return;
+    }
+
+    flushList();
+
+    if (!trimmed) {
+      blocks.push(<div key={`space-${blocks.length}`} className="h-3" />);
+      return;
+    }
+
+    if (trimmed.startsWith('## ')) {
+      blocks.push(
+        <h3
+          key={`h3-${blocks.length}`}
+          className="text-base font-semibold text-slate-900 dark:text-slate-100 my-2"
+          dangerouslySetInnerHTML={{ __html: formatInline(trimmed.slice(3)) }}
+        />,
+      );
+      return;
+    }
+
+    if (trimmed.startsWith('# ')) {
+      blocks.push(
+        <h2
+          key={`h2-${blocks.length}`}
+          className="text-lg font-bold text-slate-900 dark:text-slate-100 my-2"
+          dangerouslySetInnerHTML={{ __html: formatInline(trimmed.slice(2)) }}
+        />,
+      );
+      return;
+    }
+
+    blocks.push(
+      <p
+        key={`p-${blocks.length}`}
+        className="text-sm text-slate-700 dark:text-slate-200 leading-7"
+        dangerouslySetInnerHTML={{ __html: formatInline(line) }}
+      />,
+    );
+  });
+
+  flushList();
+
+  return <div>{blocks}</div>;
 }
 
 export default function LyricsModal({
@@ -363,9 +443,7 @@ export default function LyricsModal({
                 <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 px-3 py-3">
                   <p className="text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500 mb-2">Preview</p>
                   {editText.trim() ? (
-                    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-headings:my-3 prose-headings:text-slate-800 dark:prose-headings:text-slate-100 prose-strong:text-slate-900 dark:prose-strong:text-slate-100">
-                      <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{editText}</ReactMarkdown>
-                    </div>
+                    <RenderFormattedLyrics text={editText} />
                   ) : (
                     <p className="text-xs text-slate-400 dark:text-slate-500">Start typing to preview formatted lyrics.</p>
                   )}
@@ -373,9 +451,7 @@ export default function LyricsModal({
               )}
             </div>
           ) : lyrics ? (
-            <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-headings:my-3 prose-headings:text-slate-800 dark:prose-headings:text-slate-100 prose-strong:text-slate-900 dark:prose-strong:text-slate-100">
-              <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{lyrics}</ReactMarkdown>
-            </div>
+            <RenderFormattedLyrics text={lyrics} />
           ) : (
             <div className="text-center py-14">
               <p className="text-4xl mb-3">🎵</p>

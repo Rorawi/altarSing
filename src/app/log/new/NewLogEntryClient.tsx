@@ -19,19 +19,26 @@ interface SongOption {
   musical_key: string | null;
 }
 
+function generateUid() {
+  if (typeof globalThis !== 'undefined' && globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+  return `song-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
 export default function NewLogEntryClient({ songs }: { songs: SongOption[] }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [songEntries, setSongEntries] = useState<SongEntry[]>([
-    { uid: crypto.randomUUID(), songId: '', title: '', key: '', tags: [] },
+    { uid: generateUid(), songId: '', title: '', key: '', tags: [] },
   ]);
   const [leaders, setLeaders] = useState<string[]>(['']);
   const today = new Date().toISOString().split('T')[0];
 
   function addSong() {
     if (songEntries.length >= 4) return;
-    setSongEntries((prev) => [...prev, { uid: crypto.randomUUID(), songId: '', title: '', key: '', tags: [] }]);
+    setSongEntries((prev) => [...prev, { uid: generateUid(), songId: '', title: '', key: '', tags: [] }]);
   }
   function toggleSongTag(uid: string, tag: string) {
     setSongEntries((prev) =>
