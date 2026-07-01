@@ -134,8 +134,8 @@ export default function CollectionsClient({
   if (jamMode && selected) {
     return (
       <>
-      <div className="fixed inset-0 z-50 bg-slate-950 overflow-y-auto">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 sticky top-0 bg-slate-950">
+      <div className="fixed inset-0 z-60 bg-slate-950 overflow-y-auto">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 fixed w-full top-0 bg-slate-950">
           <div>
             <p className="text-xs text-emerald-400 font-bold uppercase tracking-widest mb-0.5">
               Jam Mode
@@ -149,9 +149,9 @@ export default function CollectionsClient({
             ✕ Exit
           </button>
         </div>
-        <div className="px-5 py-6 space-y-5">
+        <div className="px-5 py-6 space-y-5 mt-18.5 overflow-y-auto">
           {filteredSongs.map((song, index) => (
-            <div key={song.id} className="border-b border-slate-800 pb-5">
+            <div key={song.id} className="border-b last:border-b-0 border-slate-800 pb-5">
               <div className="flex items-start gap-3">
                 <span className="text-slate-600 text-sm font-mono shrink-0 pt-1 w-5 text-right">
                   {index + 1}
