@@ -1244,9 +1244,13 @@ function SongLeaderInput({
     }
   }
 
+  function commitTypedLeader() {
+    if (inputValue.trim()) addLeader(inputValue);
+  }
+
   return (
     <div className="relative">
-      <div className="flex flex-wrap gap-1.5 min-h-9.5 w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-xl px-2.5 py-1.5 focus-within:ring-2 focus-within:ring-violet-500 cursor-text">
+      <div className="flex flex-wrap items-center gap-1.5 min-h-9.5 w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-xl px-2.5 py-1.5 focus-within:ring-2 focus-within:ring-violet-500 cursor-text">
         {values.map((v) => (
           <span
             key={v}
@@ -1267,12 +1271,28 @@ function SongLeaderInput({
           value={inputValue}
           onChange={(e) => { setInputValue(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
-          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          onBlur={() => {
+            setTimeout(() => {
+              commitTypedLeader();
+              setOpen(false);
+            }, 120);
+          }}
           onKeyDown={handleKeyDown}
           placeholder={values.length === 0 ? 'Add leader name…' : ''}
           autoComplete="off"
           className="flex-1 min-w-25 bg-transparent text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none"
         />
+        <button
+          type="button"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            commitTypedLeader();
+          }}
+          className="shrink-0 h-6 px-2 rounded-md text-xs font-semibold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-900/60"
+          title="Add typed leader"
+        >
+          +
+        </button>
       </div>
       {open && filtered.length > 0 && (
         <div className="absolute z-20 left-0 right-0 mt-1 border border-slate-200 dark:border-slate-600 rounded-xl overflow-hidden max-h-40 overflow-y-auto shadow-lg bg-white dark:bg-slate-800">
@@ -1288,6 +1308,9 @@ function SongLeaderInput({
           ))}
         </div>
       )}
+      <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+        Pick from choir members or type any name and press Enter.
+      </p>
     </div>
   );
 }
