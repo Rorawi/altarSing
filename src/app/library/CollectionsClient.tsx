@@ -51,6 +51,7 @@ export default function CollectionsClient({
     title: string;
     songId: string | null;
     collectionSongId: string | null;
+    youtubeLink?: string | null;
   } | null>(null);
 
   const sensors = useSensors(
@@ -180,6 +181,7 @@ export default function CollectionsClient({
                           title: song.song_title,
                           songId: song.song_id,
                           collectionSongId: song.id,
+                          youtubeLink: song.song_youtube_link,
                         })
                       }
                       className="text-sm text-slate-500 hover:text-white font-medium transition-colors"
@@ -205,6 +207,7 @@ export default function CollectionsClient({
         songTitle={lyricsTarget?.title ?? ''}
         songId={lyricsTarget?.songId}
         collectionSongId={lyricsTarget?.collectionSongId}
+        youtubeLink={lyricsTarget?.youtubeLink}
       />
       </>
     );
@@ -324,6 +327,7 @@ export default function CollectionsClient({
                         title: song.song_title,
                         songId: song.song_id,
                         collectionSongId: song.id,
+                        youtubeLink: song.song_youtube_link,
                       })
                     }
                     onRemove={() => handleRemoveSong(song.id)}
@@ -367,6 +371,7 @@ export default function CollectionsClient({
         songTitle={lyricsTarget?.title ?? ''}
         songId={lyricsTarget?.songId}
         collectionSongId={lyricsTarget?.collectionSongId}
+        youtubeLink={lyricsTarget?.youtubeLink}
       />
       </>
     );
@@ -488,6 +493,7 @@ export default function CollectionsClient({
       songTitle={lyricsTarget?.title ?? ''}
       songId={lyricsTarget?.songId}
       collectionSongId={lyricsTarget?.collectionSongId}
+      youtubeLink={lyricsTarget?.youtubeLink}
     />
     </>
   );

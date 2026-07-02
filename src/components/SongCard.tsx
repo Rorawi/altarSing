@@ -162,6 +162,7 @@ export default function SongCard({
         songTitle={song.title}
         songId={song.id}
         initialLyrics={song.lyrics}
+        youtubeLink={song.youtube_link}
       />
 
       {/* Delete area */}

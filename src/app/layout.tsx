@@ -7,6 +7,8 @@ import LoadingBar from '@/components/LoadingBar';
 import ThemeProvider, { ThemeToggle } from '@/components/ThemeProvider';
 import { LoadingProvider } from '@/lib/loading-context';
 import BirthdayIndicator from '@/components/BirthdayIndicator';
+import { YouTubePlayerProvider } from '@/lib/youtube-player-context';
+import YouTubePlayer from '@/components/YouTubePlayer';
 
 const geist = Geist({ subsets: ['latin'] });
 
@@ -38,27 +40,32 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${geist.className} bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100`}>
         <ThemeProvider>
           <LoadingProvider>
-            <LoadingBar />
-            <div className="mx-auto w-full max-w-[430px] min-h-screen bg-white dark:bg-slate-900 shadow-xl">
-              {/* Fixed header */}
-              <header className="fixed top-0 left-0 right-0 max-w-[430px] mx-auto z-50 h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 px-4 flex items-center gap-2 shadow-sm no-print">
-                <span className="text-xl">🎶</span>
-                <h1 className="font-bold text-violet-700 dark:text-violet-400 text-lg flex-1">AltarSing</h1>
-                <Suspense fallback={null}>
-                  <BirthdayIndicator />
-                </Suspense>
-                <ThemeToggle />
-              </header>
+            <YouTubePlayerProvider>
+              <LoadingBar />
+              <div className="mx-auto w-full max-w-[430px] min-h-screen bg-white dark:bg-slate-900 shadow-xl relative">
+                {/* Fixed header */}
+                <header className="fixed top-0 left-0 right-0 max-w-[430px] mx-auto z-50 h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 px-4 flex items-center gap-2 shadow-sm no-print">
+                  <span className="text-xl">🎶</span>
+                  <h1 className="font-bold text-violet-700 dark:text-violet-400 text-lg flex-1">AltarSing</h1>
+                  <Suspense fallback={null}>
+                    <BirthdayIndicator />
+                  </Suspense>
+                  <ThemeToggle />
+                </header>
 
-              <main className="px-4 pt-16 pb-32">
-                {children}
-              </main>
+                <main className="px-4 pt-16 pb-32">
+                  {children}
+                </main>
 
-              {/* Fixed bottom nav */}
-              <div className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto z-50 no-print bg-white dark:bg-slate-900" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-                <Navigation variant="bottom" />
+                {/* Fixed bottom nav */}
+                <div className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto z-50 no-print bg-white dark:bg-slate-900" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+                  <Navigation variant="bottom" />
+                </div>
+
+                {/* Global YouTube Background Player */}
+                <YouTubePlayer />
               </div>
-            </div>
+            </YouTubePlayerProvider>
           </LoadingProvider>
         </ThemeProvider>
       </body>

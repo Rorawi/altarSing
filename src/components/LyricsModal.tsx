@@ -8,7 +8,9 @@ import {
   updateCollectionSongLyrics,
   updateSongLyrics,
   updateRehearsalSongLyrics,
+  getSongYoutubeLink,
 } from '@/lib/actions';
+import { useYouTubePlayer } from '@/lib/youtube-player-context';
 
 interface LyricsModalProps {
   isOpen: boolean;
@@ -22,6 +24,8 @@ interface LyricsModalProps {
   collectionSongId?: string | null;
   /** Pre-loaded lyrics (skips fetch). Pass `null` explicitly to mean "no lyrics". Omit to trigger fetch. */
   initialLyrics?: string | null;
+  /** Optional pre-loaded youtube link. */
+  youtubeLink?: string | null;
 }
 
 function escapeHtml(text: string) {
@@ -115,8 +119,37 @@ export default function LyricsModal({
   rehearsalSongId,
   collectionSongId,
   initialLyrics,
+  youtubeLink: youtubeLinkProp,
 }: LyricsModalProps) {
   const [lyrics, setLyrics] = useState<string | null>(null);
+  const [youtubeLink, setYoutubeLink] = useState<string | null>(null);
+  const [fetchingLink, setFetchingLink] = useState(false);
+
+  const {
+    activeSong,
+    playerState,
+    setPlayerState,
+    loadSong,
+  } = useYouTubePlayer();
+
+  function handlePlayYouTube() {
+    loadSong({
+      title: songTitle,
+      songId,
+      rehearsalSongId,
+      collectionSongId,
+      youtubeLink,
+      initialLyrics: lyrics,
+    });
+  }
+
+  const playerActiveInModal = !!(
+    activeSong &&
+    playerState === 'modal' &&
+    ((songId && activeSong.songId === songId) ||
+      (rehearsalSongId && activeSong.rehearsalSongId === rehearsalSongId) ||
+      (collectionSongId && activeSong.collectionSongId === collectionSongId))
+  );
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState('');
@@ -198,6 +231,51 @@ export default function LyricsModal({
       textarea.setSelectionRange(start, start + cleanedSelected.length);
     });
   }
+
+  // Load youtube link when modal opens
+  useEffect(() => {
+    if (!isOpen) {
+      setYoutubeLink(null);
+      return;
+    }
+
+    if (youtubeLinkProp !== undefined) {
+      setYoutubeLink(youtubeLinkProp);
+    } else {
+      setFetchingLink(true);
+      getSongYoutubeLink({ songId, rehearsalSongId, collectionSongId })
+        .then((link) => {
+          setYoutubeLink(link);
+        })
+        .catch(() => {
+          setYoutubeLink(null);
+        })
+        .finally(() => {
+          setFetchingLink(false);
+        });
+    }
+  }, [isOpen, songId, rehearsalSongId, collectionSongId, youtubeLinkProp]);
+
+  // Sync player state with this modal's open/close status
+  useEffect(() => {
+    if (isOpen) {
+      if (activeSong && (
+        (songId && activeSong.songId === songId) ||
+        (rehearsalSongId && activeSong.rehearsalSongId === rehearsalSongId) ||
+        (collectionSongId && activeSong.collectionSongId === collectionSongId)
+      )) {
+        setPlayerState('modal');
+      }
+    } else {
+      if (activeSong && playerState === 'modal' && (
+        (songId && activeSong.songId === songId) ||
+        (rehearsalSongId && activeSong.rehearsalSongId === rehearsalSongId) ||
+        (collectionSongId && activeSong.collectionSongId === collectionSongId)
+      )) {
+        setPlayerState('persistent');
+      }
+    }
+  }, [isOpen, activeSong, songId, rehearsalSongId, collectionSongId, playerState, setPlayerState]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -318,6 +396,20 @@ export default function LyricsModal({
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0 mt-0.5">
+            {youtubeLink && !editing && (
+              <button
+                onClick={handlePlayYouTube}
+                className="text-xs px-2.5 py-1.5 rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white transition-all flex items-center gap-1 shadow-sm shrink-0"
+                title="Play YouTube Audio"
+              >
+                <span>▶</span> Play
+              </button>
+            )}
+            {!youtubeLink && !loading && !editing && (
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 italic mr-1 select-none shrink-0">
+                No link
+              </span>
+            )}
             {lyrics && !editing && (
               <button
                 onClick={handleCopy}
@@ -340,7 +432,7 @@ export default function LyricsModal({
         </div>
 
         {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 pb-28">
+        <div className={`flex-1 overflow-y-auto px-5 py-4 ${playerActiveInModal ? 'pb-56' : 'pb-28'}`}>
           {errorMessage && (
             <div className="mb-4 rounded-xl border border-red-200 dark:border-red-800/50 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-xs text-red-700 dark:text-red-300">
               {errorMessage}

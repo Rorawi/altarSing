@@ -79,6 +79,54 @@ export async function getSongLyrics(songId: string): Promise<string | null> {
   return data?.lyrics ?? null;
 }
 
+export async function getSongYoutubeLink(params: {
+  songId?: string | null;
+  rehearsalSongId?: string | null;
+  collectionSongId?: string | null;
+}): Promise<string | null> {
+  const supabase = await createClient();
+  if (params.songId) {
+    const { data } = await supabase
+      .from('songs')
+      .select('youtube_link')
+      .eq('id', params.songId)
+      .single();
+    if (data?.youtube_link) return data.youtube_link;
+  }
+  if (params.collectionSongId) {
+    const { data } = await supabase
+      .from('collection_songs')
+      .select('song_youtube_link, song_id')
+      .eq('id', params.collectionSongId)
+      .single();
+    if (data?.song_youtube_link) return data.song_youtube_link;
+    if (data?.song_id) {
+      const { data: songData } = await supabase
+        .from('songs')
+        .select('youtube_link')
+        .eq('id', data.song_id)
+        .single();
+      if (songData?.youtube_link) return songData.youtube_link;
+    }
+  }
+  if (params.rehearsalSongId) {
+    const { data } = await supabase
+      .from('rehearsal_songs')
+      .select('song_id')
+      .eq('id', params.rehearsalSongId)
+      .single();
+    if (data?.song_id) {
+      const { data: songData } = await supabase
+        .from('songs')
+        .select('youtube_link')
+        .eq('id', data.song_id)
+        .single();
+      if (songData?.youtube_link) return songData.youtube_link;
+    }
+  }
+  return null;
+}
+
 export async function updateSongLyrics(songId: string, lyrics: string): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase
