@@ -24,12 +24,12 @@ export default function NewSongPage() {
           </svg>
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Add New Song</h1>
-          <p className="text-sm text-slate-500">Fill in the song details</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Add New Song</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Fill in the song details</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
         <SongForm onSubmit={handleSubmit} submitLabel="Add to Library" />
       </div>
     </div>
