@@ -1,9 +1,19 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { useLoading } from '@/lib/loading-context';
 
 export default function LoadingBar() {
-  const { isLoading } = useLoading();
+  const { isLoading, stopLoading } = useLoading();
+  const pathname = usePathname();
+  const previousPathname = useRef(pathname);
+
+  useEffect(() => {
+    if (previousPathname.current === pathname) return;
+    previousPathname.current = pathname;
+    stopLoading();
+  }, [pathname, stopLoading]);
 
   return (
     <>

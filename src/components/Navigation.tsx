@@ -28,7 +28,7 @@ export default function Navigation({ variant }: { variant: 'bottom' | 'side' }) 
                 href={item.href}
                 aria-label={item.label}
                 aria-current={isActive ? 'page' : undefined}
-                onClick={() => {
+                onNavigate={() => {
                   if (!isActive) startLoading();
                 }}
                 className={variant === 'bottom'

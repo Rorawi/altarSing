@@ -7,6 +7,7 @@ import type { RehearsalSessionWithSongs, HarmonyPattern } from '@/types';
 import { deleteRehearsalSession, setRehearsalSessionClosed, addHarmonyPattern, deleteHarmonyPattern } from '@/lib/actions';
 import PageHeader from '@/components/PageHeader';
 import Icon from '@/components/Icon';
+import { useLoading } from '@/lib/loading-context';
 
 type Tab = 'sessions' | 'harmony';
 
@@ -26,6 +27,7 @@ export default function RehearsalClient({
   initialHarmonies: HarmonyPattern[];
 }) {
   const router = useRouter();
+  const { startLoading } = useLoading();
   const [tab, setTab] = useState<Tab>('sessions');
   const [search, setSearch] = useState('');
   const [showAddHarmony, setShowAddHarmony] = useState(false);
@@ -159,7 +161,7 @@ export default function RehearsalClient({
                       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">No program date set · {formatDate(featuredSession.date)}</p>
                     )}
                   </div>
-                  <Link href={`/rehearsal/${featuredSession.id}`} className="button-secondary shrink-0">Open rehearsal <Icon name="chevron-right" size={15} /></Link>
+                  <Link href={`/rehearsal/${featuredSession.id}`} onNavigate={startLoading} className="button-secondary shrink-0">Open rehearsal <Icon name="chevron-right" size={15} /></Link>
                 </div>
                 <div className="flex items-baseline justify-between border-t border-slate-200 px-1 py-2 dark:border-slate-800 sm:px-2">
                   <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">Rehearsal set</h3>
@@ -288,10 +290,11 @@ function SessionRow({
   onToggleClosed: (id: string, isClosed: boolean) => void;
   isPending: boolean;
 }) {
+  const { startLoading } = useLoading();
   const songs = [...session.rehearsal_songs].sort((a, b) => a.position - b.position);
   return (
     <div className="flex flex-col gap-2 border-b border-slate-200 px-4 py-3 last:border-b-0 hover:bg-white dark:border-slate-800 dark:hover:bg-slate-900 sm:flex-row sm:items-center sm:gap-5 sm:px-5">
-      <Link href={`/rehearsal/${session.id}`} className="grid min-w-0 flex-1 grid-cols-1 gap-1 sm:grid-cols-[minmax(0,1.1fr)_minmax(180px,1fr)_72px] sm:items-center sm:gap-4">
+      <Link href={`/rehearsal/${session.id}`} onNavigate={startLoading} className="grid min-w-0 flex-1 grid-cols-1 gap-1 sm:grid-cols-[minmax(0,1.1fr)_minmax(180px,1fr)_72px] sm:items-center sm:gap-4">
         <span className="break-words font-serif text-base font-medium text-slate-900 dark:text-slate-100">{session.name}</span>
         <span className="text-xs text-slate-600 dark:text-slate-300">
           {session.program_date ? (
@@ -316,7 +319,7 @@ function SessionRow({
         >
           <Icon name={isClosed ? 'history' : 'check'} size={15} />{isClosed ? 'Reopen' : 'Close'}
         </button>
-        <Link href={`/rehearsal/${session.id}`} className="button-quiet min-h-8 px-2 text-xs">Open</Link>
+        <Link href={`/rehearsal/${session.id}`} onNavigate={startLoading} className="button-quiet min-h-8 px-2 text-xs">Open</Link>
         <button onClick={() => onDelete(session.id, session.name)} disabled={isPending} className="icon-button h-8 w-8 text-slate-400 hover:text-red-700 dark:hover:text-red-300" title="Delete session" aria-label={`Delete ${session.name}`}><Icon name="trash" size={15} /></button>
       </div>
     </div>
