@@ -118,6 +118,11 @@ export default function RehearsalClient({
     : featuredSession?.program_date
       ? 'Most recent service plan'
       : 'Rehearsal plan · no program date';
+  const featuredSongs = featuredSession
+    ? [...featuredSession.rehearsal_songs].sort((a, b) => a.position - b.position)
+    : [];
+  const previewSongs = featuredSongs.slice(0, 5);
+  const remainingSongCount = featuredSongs.length - previewSongs.length;
 
   return (
     <div>
@@ -168,7 +173,7 @@ export default function RehearsalClient({
                   <span className="text-xs tabular-nums text-slate-500 dark:text-slate-400">{featuredSession.rehearsal_songs.length} song{featuredSession.rehearsal_songs.length !== 1 ? 's' : ''}</span>
                 </div>
                 <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {[...featuredSession.rehearsal_songs].sort((a, b) => a.position - b.position).map((song, index) => (
+                  {previewSongs.map((song, index) => (
                     <div key={song.id} className="grid grid-cols-[32px_minmax(0,1fr)_56px] items-center gap-3 px-1 py-3 sm:grid-cols-[40px_minmax(0,1fr)_72px] sm:px-2">
                       <span className="font-mono text-xs tabular-nums text-slate-400">{String(index + 1).padStart(2, '0')}</span>
                       <span className="min-w-0">
@@ -180,6 +185,14 @@ export default function RehearsalClient({
                   ))}
                   {featuredSession.rehearsal_songs.length === 0 && <p className="px-1 py-6 text-sm text-slate-500 sm:px-2">No songs have been added to this rehearsal yet.</p>}
                 </div>
+                {remainingSongCount > 0 && (
+                  <div className="flex flex-col gap-2 border-t border-slate-200 px-1 py-3 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between sm:px-2">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{remainingSongCount} more song{remainingSongCount === 1 ? '' : 's'} in the full rehearsal set</p>
+                    <Link href={`/rehearsal/${featuredSession.id}`} onNavigate={startLoading} className="inline-flex items-center gap-1 text-xs font-semibold text-violet-800 hover:text-violet-950 dark:text-violet-300 dark:hover:text-violet-100">
+                      Open the full set <Icon name="chevron-right" size={14} />
+                    </Link>
+                  </div>
+                )}
                 {featuredSession.notes && <div className="border-t border-slate-200 px-1 py-3 dark:border-slate-800 sm:px-2"><p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Rehearsal notes</p><p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-slate-600 dark:text-slate-300">{featuredSession.notes}</p></div>}
               </section>
 

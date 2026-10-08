@@ -875,16 +875,21 @@ function MedleyGroupCard({
 
       {/* Collapsed song preview */}
       {collapsed && group.songs.length > 0 && (
-        <div className="px-4 py-2 flex flex-wrap gap-1.5">
-          {group.songs.map((s) => (
-            <span
-              key={s.id}
-              className="text-xs text-slate-500 dark:text-slate-400"
-            >
-              {s.song_title}
-              {s.key_used && <span className="ml-1 font-bold opacity-70">{s.key_used}</span>}
-            </span>
-          ))}
+        <div className="border-t border-amber-200/70 px-4 py-3 dark:border-amber-800/50">
+          <ol className="divide-y divide-amber-200/60 dark:divide-amber-800/40">
+            {group.songs.slice(0, 3).map((song, index) => (
+              <li key={song.id} className="grid grid-cols-[2rem_minmax(0,1fr)_2rem] items-baseline gap-2 py-1.5 first:pt-0 last:pb-0">
+                <span className="font-mono text-[10px] tabular-nums text-amber-700/70 dark:text-amber-400/70">{String(index + 1).padStart(2, '0')}</span>
+                <span className="break-words text-sm font-medium text-slate-700 dark:text-slate-200">{song.song_title}</span>
+                <span className="text-right font-serif text-sm font-semibold text-slate-700 dark:text-slate-200">{song.key_used || '—'}</span>
+              </li>
+            ))}
+          </ol>
+          {group.songs.length > 3 && (
+            <p className="mt-2 border-t border-amber-200/60 pt-2 text-xs text-slate-500 dark:border-amber-800/40 dark:text-slate-400">
+              + {group.songs.length - 3} more songs · expand the medley to see the full set
+            </p>
+          )}
         </div>
       )}
     </div>
