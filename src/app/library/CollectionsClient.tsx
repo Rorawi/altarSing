@@ -525,10 +525,11 @@ function SortableCollectionSongRow({
         {...attributes}
         {...listeners}
         disabled={dragDisabled}
-        className="shrink-0 mt-0.5 p-0.5 text-slate-300 dark:text-slate-600 hover:text-slate-500 disabled:opacity-30 cursor-grab active:cursor-grabbing touch-none"
+        className="drag-handle mt-0.5 cursor-grab disabled:cursor-not-allowed disabled:opacity-30"
         title={dragDisabled ? 'Clear search to reorder' : 'Drag to reorder'}
+        aria-label={dragDisabled ? 'Song reorder unavailable while searching' : 'Reorder song'}
       >
-        <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+        <svg aria-hidden="true" className="pointer-events-none h-4 w-4" viewBox="0 0 16 16" fill="currentColor">
           <circle cx="5" cy="4" r="1.5" /><circle cx="11" cy="4" r="1.5" />
           <circle cx="5" cy="8" r="1.5" /><circle cx="11" cy="8" r="1.5" />
           <circle cx="5" cy="12" r="1.5" /><circle cx="11" cy="12" r="1.5" />

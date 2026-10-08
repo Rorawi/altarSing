@@ -558,10 +558,11 @@ function StandaloneSongCard({
             type="button"
             {...dragListeners}
             {...dragAttributes}
-            className="shrink-0 cursor-grab active:cursor-grabbing touch-none text-slate-300 dark:text-slate-600 hover:text-slate-400 dark:hover:text-slate-500 p-0.5"
+            className="drag-handle cursor-grab"
             title="Drag to reorder"
+            aria-label="Reorder song"
           >
-            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+            <svg aria-hidden="true" className="pointer-events-none h-4 w-4" viewBox="0 0 16 16" fill="currentColor">
               <circle cx="5" cy="4" r="1.5" /><circle cx="11" cy="4" r="1.5" />
               <circle cx="5" cy="8" r="1.5" /><circle cx="11" cy="8" r="1.5" />
               <circle cx="5" cy="12" r="1.5" /><circle cx="11" cy="12" r="1.5" />
@@ -732,10 +733,11 @@ function MedleyGroupCard({
           type="button"
           {...dragListeners}
           {...dragAttributes}
-          className="shrink-0 cursor-grab active:cursor-grabbing touch-none text-amber-300 dark:text-amber-700 hover:text-amber-500 p-0.5"
+          className="drag-handle cursor-grab"
           title="Drag to reorder"
+          aria-label="Reorder medley"
         >
-          <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+          <svg aria-hidden="true" className="pointer-events-none h-4 w-4" viewBox="0 0 16 16" fill="currentColor">
             <circle cx="5" cy="4" r="1.5" /><circle cx="11" cy="4" r="1.5" />
             <circle cx="5" cy="8" r="1.5" /><circle cx="11" cy="8" r="1.5" />
             <circle cx="5" cy="12" r="1.5" /><circle cx="11" cy="12" r="1.5" />
@@ -996,10 +998,11 @@ function MedleySongCard({
             type="button"
             {...dragListeners}
             {...dragAttributes}
-            className="shrink-0 cursor-grab active:cursor-grabbing touch-none text-amber-200 dark:text-amber-800 hover:text-amber-400 p-0.5"
+            className="drag-handle cursor-grab"
             title="Drag to reorder"
+            aria-label="Reorder song in medley"
           >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor">
+            <svg aria-hidden="true" className="pointer-events-none h-4 w-4" viewBox="0 0 16 16" fill="currentColor">
               <circle cx="5" cy="4" r="1.5" /><circle cx="11" cy="4" r="1.5" />
               <circle cx="5" cy="8" r="1.5" /><circle cx="11" cy="8" r="1.5" />
               <circle cx="5" cy="12" r="1.5" /><circle cx="11" cy="12" r="1.5" />
