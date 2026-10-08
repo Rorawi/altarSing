@@ -580,6 +580,8 @@ function StandaloneSongCard({
           <div className="relative shrink-0" ref={menuRef}>
             <button
               onClick={() => setMenuOpen((v) => !v)}
+              aria-label="Song actions"
+              aria-expanded={menuOpen}
               className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 p-1 transition-colors"
               title="More options"
             >
@@ -590,25 +592,25 @@ function StandaloneSongCard({
               </svg>
             </button>
             {menuOpen && (
-              <div className="absolute right-0 top-8 z-50 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl shadow-lg overflow-hidden min-w-40">
+              <div className="popover-surface absolute right-0 top-8 z-50 min-w-40 rounded-md">
                 {hasDetails && (
                   <button
                     onClick={() => { setExpanded((v) => !v); setMenuOpen(false); }}
-                    className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors border-b border-slate-100 dark:border-slate-600"
+                    className="popover-action border-b border-slate-100 dark:border-slate-800"
                   >
                     {expanded ? 'Hide Details' : 'Show Details'}
                   </button>
                 )}
                 <button
                   onClick={() => { setEditing(true); setMenuOpen(false); }}
-                  className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors border-b border-slate-100 dark:border-slate-600"
+                  className="popover-action border-b border-slate-100 dark:border-slate-800"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => { onDelete(song.id, song.song_title); setMenuOpen(false); }}
                   disabled={isPending}
-                  className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50"
+                  className="popover-action-danger"
                 >
                   Remove
                 </button>
@@ -651,13 +653,13 @@ function StandaloneSongCard({
           <div className="mt-3 pl-10 space-y-2 border-t border-slate-100 dark:border-slate-700 pt-3">
             {song.harmony_notes && (
               <div>
-                <p className="text-[10px] font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wide mb-0.5">Harmony</p>
+                <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Harmony</p>
                 <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">{song.harmony_notes}</p>
               </div>
             )}
             {song.arrangement_notes && (
               <div>
-                <p className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide mb-0.5">Arrangement</p>
+                <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Arrangement</p>
                 <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">{song.arrangement_notes}</p>
               </div>
             )}
@@ -747,12 +749,7 @@ function MedleyGroupCard({
             Medley
           </span>
           {editingName ? (
-            <EditMedleyNameForm
-              group={group}
-              sessionId={sessionId}
-              onDone={() => { setEditingName(false); onEdited(); }}
-              onCancel={() => setEditingName(false)}
-            />
+            <span className="text-sm font-semibold leading-snug text-slate-800 dark:text-slate-100">{group.name}</span>
           ) : (
             <button
               onClick={() => setEditingName(true)}
@@ -767,18 +764,23 @@ function MedleyGroupCard({
           {group.songs.length} song{group.songs.length !== 1 ? 's' : ''}
         </span>
         <button
+          type="button"
           onClick={() => setCollapsed((v) => !v)}
-          className="shrink-0 text-amber-500 dark:text-amber-400 hover:text-amber-700 transition-colors p-0.5"
+          aria-expanded={!collapsed}
+          aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${group.name}`}
+          className="button-quiet min-h-11 min-w-11 shrink-0 gap-1 px-2 text-xs"
           title={collapsed ? 'Expand' : 'Collapse'}
         >
           <svg
-            className={`w-4 h-4 transition-transform ${collapsed ? '-rotate-90' : ''}`}
+            aria-hidden="true"
+            className={`h-4 w-4 transition-transform ${collapsed ? '-rotate-90' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
+          <span>{collapsed ? 'Expand' : 'Collapse'}</span>
         </button>
         <button
           onClick={() => onDeleteGroup(group.id, group.name)}
@@ -789,6 +791,17 @@ function MedleyGroupCard({
           ×
         </button>
       </div>
+
+      {editingName && (
+        <div className="border-b border-amber-200/80 px-3 py-3 dark:border-amber-800/60">
+          <EditMedleyNameForm
+            group={group}
+            sessionId={sessionId}
+            onDone={() => { setEditingName(false); onEdited(); }}
+            onCancel={() => setEditingName(false)}
+          />
+        </div>
+      )}
 
       {/* Expanded content */}
       {!collapsed && (
@@ -1002,6 +1015,8 @@ function MedleySongCard({
           <div className="relative shrink-0" ref={menuRef}>
             <button
               onClick={() => setMenuOpen((v) => !v)}
+              aria-label="Medley song actions"
+              aria-expanded={menuOpen}
               className="text-amber-300 dark:text-amber-700 hover:text-amber-700 dark:hover:text-amber-400 p-0.5 transition-colors"
               title="More options"
             >
@@ -1012,25 +1027,25 @@ function MedleySongCard({
               </svg>
             </button>
             {menuOpen && (
-              <div className="absolute right-0 top-6 z-50 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl shadow-lg overflow-hidden min-w-40">
+              <div className="popover-surface absolute right-0 top-6 z-50 min-w-40 rounded-md">
                 {hasDetails && (
                   <button
                     onClick={() => { setExpanded((v) => !v); setMenuOpen(false); }}
-                    className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors border-b border-slate-100 dark:border-slate-600"
+                    className="popover-action border-b border-slate-100 dark:border-slate-800"
                   >
                     {expanded ? 'Hide Details' : 'Show Details'}
                   </button>
                 )}
                 <button
                   onClick={() => { setEditing(true); setMenuOpen(false); }}
-                  className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors border-b border-slate-100 dark:border-slate-600"
+                  className="popover-action border-b border-slate-100 dark:border-slate-800"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => { onDelete(song.id, song.song_title); setMenuOpen(false); }}
                   disabled={isPending}
-                  className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50"
+                  className="popover-action-danger"
                 >
                   Remove
                 </button>
@@ -1075,13 +1090,13 @@ function MedleySongCard({
           <div className="mt-2 pl-8 space-y-1.5 border-t border-amber-50 dark:border-amber-900/30 pt-2">
             {song.harmony_notes && (
               <div>
-                <p className="text-[10px] font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wide mb-0.5">Harmony</p>
+                <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Harmony</p>
                 <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">{song.harmony_notes}</p>
               </div>
             )}
             {song.arrangement_notes && (
               <div>
-                <p className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide mb-0.5">Arrangement</p>
+                <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Arrangement</p>
                 <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">{song.arrangement_notes}</p>
               </div>
             )}
@@ -1125,25 +1140,27 @@ function EditMedleyNameForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex items-center gap-1.5 mt-0.5">
-      <input
-        type="text"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        autoFocus
-        required
-        className="flex-1 min-w-0 border border-amber-300 dark:border-amber-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-2 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400"
-      />
-      <button
-        type="submit"
-        disabled={isPending}
-        className="text-xs text-amber-700 dark:text-amber-300 font-semibold hover:underline disabled:opacity-50"
-      >
-        Save
-      </button>
-      <button type="button" onClick={onCancel} className="text-xs text-slate-400 hover:text-slate-600">
-        ✕
-      </button>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row sm:items-end">
+      <div className="w-full max-w-2xl">
+        <label htmlFor={`medley-name-${group.id}`} className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
+          Rename medley
+        </label>
+        <input
+          id={`medley-name-${group.id}`}
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          autoFocus
+          required
+          className="field-control"
+        />
+      </div>
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onCancel} className="button-secondary">Cancel</button>
+        <button type="submit" disabled={isPending || !name.trim()} className="button-primary min-w-28">
+          {isPending ? 'Saving…' : 'Save name'}
+        </button>
+      </div>
     </form>
   );
 }
@@ -1172,32 +1189,31 @@ function CreateMedleyForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-200 dark:border-amber-700 rounded-2xl p-4 space-y-3"
+      className="space-y-4 rounded-b-md border-t border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-950/30 sm:p-5"
     >
-      <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide">
-        New Medley
-      </p>
-      <div>
-        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-          Medley Name
-        </label>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          autoFocus
-          placeholder="e.g. Praise Medley, Carol Medley…"
-          className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-        />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="min-w-0 flex-1">
+          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
+            New medley
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            autoFocus
+            placeholder="e.g. Praise Medley, Carol Medley…"
+            className="field-control"
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={isPending || !name.trim()}
+          className="button-primary sm:min-w-36"
+        >
+          {isPending ? 'Creating…' : 'Create medley'}
+        </button>
       </div>
-      <button
-        type="submit"
-        disabled={isPending || !name.trim()}
-        className="w-full bg-amber-500 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-amber-600 transition-colors disabled:opacity-50"
-      >
-        {isPending ? 'Creating…' : 'Create Medley'}
-      </button>
     </form>
   );
 }
@@ -1247,17 +1263,18 @@ function SongLeaderInput({
 
   return (
     <div className="relative">
-      <div className="flex flex-wrap items-center gap-1.5 min-h-9.5 w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 rounded-xl px-2.5 py-1.5 focus-within:ring-2 focus-within:ring-violet-500 cursor-text">
+      <div className="flex min-h-10 w-full cursor-text flex-wrap items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 focus-within:border-violet-700 focus-within:ring-2 focus-within:ring-violet-700/15 dark:border-slate-700 dark:bg-slate-900">
         {values.map((v) => (
           <span
             key={v}
-            className="inline-flex items-center gap-1 bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 text-xs font-medium px-2 py-0.5 rounded-lg"
+            className="inline-flex items-center gap-1 rounded border border-slate-200 bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
           >
             {v}
             <button
               type="button"
               onMouseDown={(e) => { e.preventDefault(); removeLeader(v); }}
-              className="text-violet-400 hover:text-violet-700 dark:hover:text-violet-100 leading-none"
+              aria-label={`Remove ${v}`}
+              className="leading-none text-slate-400 hover:text-slate-700 dark:hover:text-white"
             >
               ×
             </button>
@@ -1275,7 +1292,7 @@ function SongLeaderInput({
           onKeyDown={handleKeyDown}
           placeholder={values.length === 0 ? 'Add leader name…' : ''}
           autoComplete="off"
-          className="flex-1 min-w-25 bg-transparent text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none"
+          className="min-w-25 flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100"
         />
         <button
           type="button"
@@ -1283,20 +1300,20 @@ function SongLeaderInput({
             e.preventDefault();
             commitTypedLeader();
           }}
-          className="shrink-0 h-6 px-2 rounded-md text-xs font-semibold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-900/60"
+          className="button-quiet h-7 min-h-7 shrink-0 px-2 text-xs"
           title="Add typed leader"
         >
           +
         </button>
       </div>
       {open && filtered.length > 0 && (
-        <div className="absolute z-20 left-0 right-0 mt-1 border border-slate-200 dark:border-slate-600 rounded-xl overflow-hidden max-h-40 overflow-y-auto shadow-lg bg-white dark:bg-slate-800">
+        <div className="popover-surface absolute left-0 right-0 z-20 mt-1 max-h-52 overflow-y-auto rounded-md">
           {filtered.slice(0, 6).map((m) => (
             <button
               key={m.id}
               type="button"
               onMouseDown={() => addLeader(m.name)}
-              className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-violet-50 dark:hover:bg-violet-900/20 border-b border-slate-100 dark:border-slate-700 last:border-0"
+              className="popover-action border-b border-slate-100 last:border-b-0 dark:border-slate-800"
             >
               {m.name}
             </button>
@@ -1352,66 +1369,79 @@ function EditSongForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-violet-50 dark:bg-violet-900/20 border-2 border-violet-200 dark:border-violet-700 rounded-2xl p-4 space-y-3"
+      className="space-y-4 rounded-b-md border-t border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-950/30 sm:p-5"
     >
-      <p className="text-xs font-semibold text-violet-700 dark:text-violet-400 uppercase tracking-wide">Edit Song</p>
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          required
-          placeholder="Song title"
-          className="flex-1 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-        />
-        <select
-          value={key}
-          onChange={(e) => setKey(e.target.value)}
-          className="w-20 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-xl px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 shrink-0"
-        >
-          <option value="">Key</option>
-          {MUSICAL_KEYS.map((k) => <option key={k} value={k}>{k}</option>)}
-        </select>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Edit song</p>
+        <span className="text-xs text-slate-400 dark:text-slate-500">Update rehearsal details</span>
       </div>
-      <div className="flex items-center gap-3">
-        <label className="text-xs text-slate-500 dark:text-slate-400 shrink-0">Run-throughs</label>
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={() => setRunThroughs((v) => Math.max(1, v - 1))}
-            className="w-7 h-7 rounded-full border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-slate-700">−</button>
-          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 w-4 text-center">{runThroughs}</span>
-          <button type="button" onClick={() => setRunThroughs((v) => v + 1)}
-            className="w-7 h-7 rounded-full border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-100 dark:hover:bg-slate-700">+</button>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_7rem]">
+        <div>
+          <label htmlFor={`song-title-${song.id}`} className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">Song title</label>
+          <input
+            id={`song-title-${song.id}`}
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+            placeholder="Song title"
+            className="field-control"
+          />
+        </div>
+        <div>
+          <label htmlFor={`song-key-${song.id}`} className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">Key</label>
+          <select
+            id={`song-key-${song.id}`}
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            className="field-control"
+          >
+            <option value="">Unspecified</option>
+            {MUSICAL_KEYS.map((k) => <option key={k} value={k}>{k}</option>)}
+          </select>
         </div>
       </div>
-      <textarea value={harmonyNotes} onChange={(e) => setHarmonyNotes(e.target.value)}
-        placeholder="Harmony notes…" rows={2}
-        className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none" />
-      <textarea value={arrangementNotes} onChange={(e) => setArrangementNotes(e.target.value)}
-        placeholder="Arrangement notes…" rows={2}
-        className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none" />
-      <div>
-        <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Service moment <span className="font-normal">(optional)</span></label>
-        <select value={serviceMoment} onChange={(e) => setServiceMoment(e.target.value)}
-          className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500">
-          <option value="">— None —</option>
-          {SERVICE_MOMENTS.map((m) => <option key={m} value={m}>{m}</option>)}
-        </select>
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Run-throughs</span>
+        <div className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-900">
+          <button type="button" aria-label="Remove a run-through" onClick={() => setRunThroughs((v) => Math.max(1, v - 1))}
+            className="icon-button h-8 w-8">−</button>
+          <span className="w-7 text-center text-sm font-semibold tabular-nums text-slate-700 dark:text-slate-200">{runThroughs}</span>
+          <button type="button" aria-label="Add a run-through" onClick={() => setRunThroughs((v) => v + 1)}
+            className="icon-button h-8 w-8">+</button>
+        </div>
       </div>
-      <div>
-        <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Song Leaders <span className="font-normal">(optional)</span></label>
-        <SongLeaderInput
-          values={songLeaders}
-          onChange={setSongLeaders}
-        />
+      <div className="grid gap-3 md:grid-cols-2">
+        <div>
+          <label htmlFor={`harmony-${song.id}`} className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">Harmony notes <span className="font-normal text-slate-400">(optional)</span></label>
+          <textarea id={`harmony-${song.id}`} value={harmonyNotes} onChange={(e) => setHarmonyNotes(e.target.value)}
+            placeholder="Voicing, entries, or parts to listen for…" rows={2}
+            className="field-control resize-y" />
+        </div>
+        <div>
+          <label htmlFor={`arrangement-${song.id}`} className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">Arrangement notes <span className="font-normal text-slate-400">(optional)</span></label>
+          <textarea id={`arrangement-${song.id}`} value={arrangementNotes} onChange={(e) => setArrangementNotes(e.target.value)}
+            placeholder="Structure, transitions, or cues…" rows={2}
+            className="field-control resize-y" />
+        </div>
       </div>
-      <div className="flex gap-2 pt-1">
-        <button type="button" onClick={onCancel}
-          className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-xl py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700">
-          Cancel
-        </button>
-        <button type="submit" disabled={isPending}
-          className="flex-1 bg-violet-600 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-violet-700 disabled:opacity-60">
-          {isPending ? 'Saving…' : 'Save'}
+      <div className="grid gap-3 md:grid-cols-2">
+        <div>
+          <label htmlFor={`service-moment-${song.id}`} className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">Service moment <span className="font-normal text-slate-400">(optional)</span></label>
+          <select id={`service-moment-${song.id}`} value={serviceMoment} onChange={(e) => setServiceMoment(e.target.value)} className="field-control">
+            <option value="">— None —</option>
+            {SERVICE_MOMENTS.map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">Song leaders <span className="font-normal text-slate-400">(optional)</span></label>
+          <SongLeaderInput values={songLeaders} onChange={setSongLeaders} />
+        </div>
+      </div>
+      <div className="flex justify-end gap-2 border-t border-slate-200 pt-3 dark:border-slate-800">
+        <button type="button" onClick={onCancel} className="button-secondary">Cancel</button>
+        <button type="submit" disabled={isPending || !title.trim()} className="button-primary min-w-24">
+          {isPending ? 'Saving…' : 'Save changes'}
         </button>
       </div>
     </form>
@@ -1490,7 +1520,7 @@ function AddSongForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white dark:bg-slate-800 border border-violet-200 dark:border-violet-700 rounded-2xl p-4 space-y-4"
+      className="space-y-4 rounded-md border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950/30 sm:p-5"
     >
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
@@ -1515,7 +1545,7 @@ function AddSongForm({
               <select
                 value={collectionFilter}
                 onChange={(e) => { setCollectionFilter(e.target.value); setSelectedSong(null); setLibrarySearch(''); }}
-                className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-violet-400"
+            className="field-control"
               >
                 <option value="">All songs</option>
                 {collections.map((c) => (
@@ -1528,26 +1558,26 @@ function AddSongForm({
           <input type="text" value={librarySearch}
             onChange={(e) => { setLibrarySearch(e.target.value); setSelectedSong(null); }}
             placeholder={activeCollection ? `Search in "${activeCollection.name}"…` : 'Type to search your song library…'}
-            className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+            className="field-control"
           />
           {(librarySearch || activeCollection) && !selectedSong && filteredLibrary.length > 0 && (
-            <div className="mt-1 border border-slate-200 dark:border-slate-600 rounded-xl overflow-hidden max-h-48 overflow-y-auto">
+            <div className="popover-surface mt-1 max-h-48 overflow-y-auto rounded-md">
               {filteredLibrary.slice(0, 8).map((song) => (
                 <button key={song.id} type="button" onClick={() => handleSelectLibrarySong(song)}
-                  className="w-full text-left px-3 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-violet-50 dark:hover:bg-violet-900/20 border-b border-slate-100 dark:border-slate-700 last:border-0 flex items-center justify-between">
+                  className="popover-action justify-between border-b border-slate-100 last:border-0 dark:border-slate-800">
                   <span>{song.title}</span>
                   {song.musical_key && (
-                    <span className="text-xs text-violet-600 dark:text-violet-400 font-medium ml-2 shrink-0">{song.musical_key}</span>
+                    <span className="ml-3 shrink-0 text-xs font-medium text-slate-500 dark:text-slate-400">{song.musical_key}</span>
                   )}
                 </button>
               ))}
             </div>
           )}
           {selectedSong && (
-            <div className="mt-1.5 flex items-center gap-2 bg-violet-50 dark:bg-violet-900/20 rounded-xl px-3 py-2">
-              <span className="text-sm text-violet-700 dark:text-violet-300 font-medium flex-1">{selectedSong.title}</span>
+            <div className="mt-1.5 flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+              <span className="flex-1 text-sm font-medium text-slate-800 dark:text-slate-200">{selectedSong.title}</span>
               <button type="button" onClick={() => { setSelectedSong(null); setLibrarySearch(''); }}
-                className="text-violet-400 hover:text-violet-600 text-sm">✕</button>
+                aria-label="Clear selected song" className="icon-button h-7 w-7">×</button>
             </div>
           )}
         </div>
@@ -1556,7 +1586,7 @@ function AddSongForm({
           <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Song Title</label>
           <input type="text" value={manualTitle} onChange={(e) => setManualTitle(e.target.value)}
             required={!useLibrary} placeholder="Enter song title…"
-            className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+            className="field-control"
           />
         </div>
       )}
@@ -1566,7 +1596,7 @@ function AddSongForm({
           Key Used <span className="text-slate-400 font-normal">(for this session)</span>
         </label>
         <select value={keyUsed} onChange={(e) => setKeyUsed(e.target.value)}
-          className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400">
+          className="field-control">
           <option value="">Select key…</option>
           {MUSICAL_KEYS.map((k) => <option key={k} value={k}>{k}</option>)}
         </select>
@@ -1624,7 +1654,7 @@ function AddSongForm({
 
       <button type="submit"
         disabled={isPending || (useLibrary ? !selectedSong && !librarySearch.trim() : !manualTitle.trim())}
-        className="w-full bg-violet-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors disabled:opacity-50">
+        className="button-primary w-full sm:w-auto sm:min-w-40">
         {isPending ? 'Adding…' : `Add Song #${nextPosition}`}
       </button>
     </form>
@@ -1706,10 +1736,10 @@ function AddSongToMedleyForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-3 space-y-3"
+      className="space-y-3 rounded-md border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/30"
     >
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+        <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
           Song #{nextPosition} in medley
         </p>
         <label className="flex items-center gap-1.5 cursor-pointer">
@@ -1729,7 +1759,7 @@ function AddSongToMedleyForm({
               <select
                 value={collectionFilter}
                 onChange={(e) => { setCollectionFilter(e.target.value); setSelectedSong(null); setLibrarySearch(''); }}
-                className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400"
+                className="field-control"
               >
                 <option value="">All songs</option>
                 {collections.map((c) => (
@@ -1741,33 +1771,33 @@ function AddSongToMedleyForm({
           <input type="text" value={librarySearch}
             onChange={(e) => { setLibrarySearch(e.target.value); setSelectedSong(null); }}
             placeholder={activeCollection ? `"${activeCollection.name}"…` : 'Search library…'}
-            className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className="field-control"
           />
           {(librarySearch || activeCollection) && !selectedSong && filteredLibrary.length > 0 && (
-            <div className="mt-1 border border-slate-200 dark:border-slate-600 rounded-xl overflow-hidden max-h-40 overflow-y-auto">
+            <div className="popover-surface mt-1 max-h-40 overflow-y-auto rounded-md">
               {filteredLibrary.slice(0, 6).map((song) => (
                 <button key={song.id} type="button" onClick={() => handleSelectLibrarySong(song)}
-                  className="w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-amber-900/20 border-b border-slate-100 dark:border-slate-700 last:border-0 flex items-center justify-between">
+                  className="popover-action justify-between border-b border-slate-100 last:border-0 dark:border-slate-800">
                   <span>{song.title}</span>
                   {song.musical_key && (
-                    <span className="text-xs text-amber-600 dark:text-amber-400 font-medium ml-2 shrink-0">{song.musical_key}</span>
+                    <span className="ml-3 shrink-0 text-xs font-medium text-slate-500 dark:text-slate-400">{song.musical_key}</span>
                   )}
                 </button>
               ))}
             </div>
           )}
           {selectedSong && (
-            <div className="mt-1 flex items-center gap-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg px-2.5 py-1.5">
-              <span className="text-sm text-amber-800 dark:text-amber-200 font-medium flex-1">{selectedSong.title}</span>
+            <div className="mt-1 flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 dark:border-slate-700 dark:bg-slate-900">
+              <span className="flex-1 text-sm font-medium text-slate-800 dark:text-slate-200">{selectedSong.title}</span>
               <button type="button" onClick={() => { setSelectedSong(null); setLibrarySearch(''); }}
-                className="text-amber-400 hover:text-amber-600 text-sm">✕</button>
+                aria-label="Clear selected song" className="icon-button h-7 w-7">×</button>
             </div>
           )}
         </div>
       ) : (
         <input type="text" value={manualTitle} onChange={(e) => setManualTitle(e.target.value)}
           required={!useLibrary} placeholder="Song title…"
-          className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+          className="field-control"
         />
       )}
 
@@ -1775,7 +1805,7 @@ function AddSongToMedleyForm({
         <div className="flex-1">
           <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">Key</label>
           <select value={keyUsed} onChange={(e) => setKeyUsed(e.target.value)}
-            className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
+            className="field-control">
             <option value="">—</option>
             {MUSICAL_KEYS.map((k) => <option key={k} value={k}>{k}</option>)}
           </select>
@@ -1793,23 +1823,23 @@ function AddSongToMedleyForm({
       </div>
 
       {keyChanged && (
-        <div className="bg-amber-100 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg px-2.5 py-1.5 text-xs text-amber-700 dark:text-amber-400 font-medium">
+        <div className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
           Key change: {lastKey} → {keyUsed}
         </div>
       )}
 
       <textarea value={harmonyNotes} onChange={(e) => setHarmonyNotes(e.target.value)}
         placeholder="Harmony notes… (optional)" rows={2}
-        className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-500 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none" />
+        className="field-control resize-y" />
 
       <textarea value={arrangementNotes} onChange={(e) => setArrangementNotes(e.target.value)}
         placeholder="Arrangement notes… (optional)" rows={2}
-        className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-500 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none" />
+        className="field-control resize-y" />
 
       <div>
         <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">Service moment <span className="font-normal">(optional)</span></label>
         <select value={serviceMoment} onChange={(e) => setServiceMoment(e.target.value)}
-          className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
+          className="field-control">
           <option value="">— None —</option>
           {SERVICE_MOMENTS.map((m) => <option key={m} value={m}>{m}</option>)}
         </select>
@@ -1825,7 +1855,7 @@ function AddSongToMedleyForm({
 
       <button type="submit"
         disabled={isPending || (useLibrary ? !selectedSong && !librarySearch.trim() : !manualTitle.trim())}
-        className="w-full bg-amber-500 text-white py-2 rounded-lg text-sm font-semibold hover:bg-amber-600 transition-colors disabled:opacity-50">
+        className="button-primary w-full sm:w-auto sm:min-w-36">
         {isPending ? 'Adding…' : 'Add to Medley'}
       </button>
     </form>

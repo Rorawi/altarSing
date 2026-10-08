@@ -381,20 +381,23 @@ export default function LyricsModal({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-end justify-center bg-black/55 p-0 sm:items-center sm:p-6"
+      className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/45 p-0 backdrop-blur-[1px] sm:items-center sm:p-6"
       onClick={onClose}
     >
       <div
-        className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 sm:rounded-lg"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="lyrics-dialog-title"
+        className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-2xl border border-slate-200 bg-[#fbfaf7] shadow-2xl dark:border-slate-700 dark:bg-slate-900 sm:rounded-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Sticky header */}
         <div className="px-5 pt-5 pb-3 border-b border-slate-100 dark:border-slate-800 flex items-start gap-3 shrink-0">
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-0.5">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-0.5">
               Lyrics
             </p>
-            <p className="font-bold text-slate-900 dark:text-slate-100 text-base leading-snug">
+            <p id="lyrics-dialog-title" className="break-words font-serif font-semibold text-slate-950 dark:text-slate-100 text-base leading-snug">
               {songTitle}
             </p>
           </div>
@@ -417,10 +420,10 @@ export default function LyricsModal({
             {lyrics && !editing && (
               <button
                 onClick={handleCopy}
-                className={`text-xs px-3 py-1.5 rounded-xl font-semibold transition-all ${
+                className={`min-h-8 px-2.5 text-xs font-medium transition-colors ${
                   copied
-                    ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
-                    : 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-900/50'
+                    ? 'button-quiet text-emerald-700 dark:text-emerald-300'
+                    : 'button-secondary'
                 }`}
               >
                 {copied ? 'Copied' : 'Copy lyrics'}

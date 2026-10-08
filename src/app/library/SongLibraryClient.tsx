@@ -194,33 +194,37 @@ function AddToCollectionModal({
 
   return (
     <div
-      className="fixed inset-0 z-[55] flex items-end justify-center bg-black/50"
+      className="fixed inset-0 z-[55] flex items-end justify-center bg-slate-950/45 backdrop-blur-[1px] sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-slate-800 rounded-t-3xl w-full max-w-md p-5 pb-24"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-to-collection-title"
+        className="max-h-[85vh] w-full max-w-xl overflow-hidden rounded-t-2xl border border-slate-200 bg-[#fbfaf7] shadow-2xl dark:border-slate-700 dark:bg-slate-900 sm:rounded-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">Add to collection</p>
-            <p className="font-bold text-slate-900 dark:text-slate-100 mt-0.5">{song.title}</p>
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-4 py-4 dark:border-slate-800 sm:px-5">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">Add to collection</p>
+            <h2 id="add-to-collection-title" className="mt-1 break-words font-serif text-lg font-semibold text-slate-950 dark:text-slate-100">{song.title}</h2>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-2xl leading-none ml-4"
+            className="icon-button -mr-1 -mt-1 shrink-0"
+            aria-label="Close collection picker"
           >
-            ×
+            <Icon name="close" size={17} />
           </button>
         </div>
 
         {collections.length === 0 ? (
-          <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-6 leading-relaxed">
+          <p className="px-5 py-10 text-center text-sm leading-relaxed text-slate-500 dark:text-slate-400">
             No collections yet.<br />
             Create one in the Collections tab.
           </p>
         ) : (
-          <div className="space-y-2 max-h-64 overflow-y-auto">
+          <div className="max-h-[60vh] space-y-0 overflow-y-auto px-4 py-2 sm:px-5">
             {collections.map((c) => {
               const inCollection = alreadyInIds.has(c.id) || added.has(c.id);
               return (
@@ -228,14 +232,14 @@ function AddToCollectionModal({
                   key={c.id}
                   onClick={() => !inCollection && handleAdd(c.id)}
                   disabled={isPending || inCollection}
-                  className={`w-full text-left px-4 py-3 rounded-xl border transition-all flex items-center justify-between ${
+                  className={`flex w-full items-center justify-between gap-4 border-b px-2 py-3 text-left transition-colors last:border-b-0 dark:border-slate-800 ${
                     inCollection
-                      ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 cursor-default'
-                      : 'border-slate-200 dark:border-slate-600 hover:border-violet-300 dark:hover:border-violet-500 hover:bg-violet-50 dark:hover:bg-violet-900/20 disabled:opacity-50'
+                      ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20 cursor-default'
+                      : 'border-slate-200 hover:bg-stone-100 dark:hover:bg-slate-800 disabled:opacity-50'
                   }`}
                 >
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">
                       {c.name}
                     </p>
                     <p className="text-xs text-slate-400 dark:text-slate-500">
@@ -243,15 +247,18 @@ function AddToCollectionModal({
                     </p>
                   </div>
                   {inCollection ? (
-                    <span className="text-xs text-green-600 dark:text-green-400 font-semibold">✓ Added</span>
+                    <span className="shrink-0 text-xs font-medium text-emerald-700 dark:text-emerald-300">Added</span>
                   ) : (
-                    <span className="text-xs text-violet-600 dark:text-violet-400 font-medium">+ Add</span>
+                    <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-violet-800 dark:text-violet-300"><Icon name="plus" size={14} />Add</span>
                   )}
                 </button>
               );
             })}
           </div>
         )}
+        <div className="flex justify-end border-t border-slate-200 px-4 py-3 dark:border-slate-800 sm:px-5">
+          <button onClick={onClose} className="button-secondary">Done</button>
+        </div>
       </div>
     </div>
   );
