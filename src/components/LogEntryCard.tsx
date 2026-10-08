@@ -31,11 +31,11 @@ export default function LogEntryCard({ log }: { log: ServiceLog }) {
               {displaySongs.length > 1 && <span className="pt-0.5 font-mono text-[11px] tabular-nums text-slate-400">{String(index + 1).padStart(2, '0')}</span>}
               {displaySongs.length === 1 && <span />}
               <div className="min-w-0">
-                <p className="break-words text-sm font-medium leading-snug text-slate-900 dark:text-slate-100">{song.title}</p>
+                <p className="break-words font-serif text-base font-medium leading-snug text-slate-950 dark:text-slate-100">{song.title}</p>
                 {song.tags?.length ? <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{song.tags.join(' · ')}</p> : null}
               </div>
               <div className="flex items-center gap-3 pl-2">
-                {song.key && <span className="min-w-7 text-center font-serif text-base font-semibold tabular-nums text-violet-900 dark:text-violet-200">{song.key}</span>}
+                {song.key && <span className="min-w-7 text-center font-serif text-base font-semibold tabular-nums text-slate-900 dark:text-slate-100">{song.key}</span>}
                 <button onClick={() => setLyricsTarget({ title: song.title, songId: song.song_id })} className="button-quiet min-h-8 px-1.5 text-xs">Lyrics</button>
               </div>
             </div>

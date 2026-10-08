@@ -63,7 +63,7 @@ export default function SongLibraryClient({
         title="Song library"
         description={<>{initialSongs.length} song{initialSongs.length !== 1 ? 's' : ''}{hasFilters && activeTab === 'songs' ? ` · ${filtered.length} shown` : ''}</>}
         actions={activeTab === 'songs' ? <>
-          <Link href="/quick-add" className="button-secondary"><Icon name="sparkles" size={16} />Quick add</Link>
+          <Link href="/quick-add" className="button-secondary"><Icon name="music" size={16} />Quick add</Link>
           <Link href="/library/new" className="button-primary"><Icon name="plus" size={17} />Add song</Link>
         </> : undefined}
       />
@@ -125,8 +125,8 @@ export default function SongLibraryClient({
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-            <div className="hidden grid-cols-[minmax(0,1.45fr)_minmax(150px,1fr)_minmax(130px,.85fr)_auto] gap-4 border-b border-slate-200 bg-slate-50 px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400 xl:grid">
+            <div className="border-y border-slate-200 dark:border-slate-800">
+            <div className="hidden grid-cols-[minmax(0,1.45fr)_minmax(150px,1fr)_minmax(130px,.85fr)_auto] gap-4 border-b border-slate-200 px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:border-slate-800 dark:text-slate-400 lg:grid">
               <span>Song</span><span>Musical information</span><span>Rehearsal</span><span className="text-right">Actions</span>
             </div>
             {filtered.length === 0 ? (

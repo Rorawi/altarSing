@@ -159,10 +159,9 @@ export default function AttendanceClient({ members, sessionDate }: Props) {
             <span className="sr-only">Attendance date</span>
             <input type="date" value={sessionDate} onChange={handleDateChange} className="field-control" />
           </label>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-            <span className="inline-flex items-center gap-1.5 text-slate-700 dark:text-slate-200"><span className="h-2 w-2 rounded-full bg-emerald-600" />{presentCount} present</span>
-            <span className="inline-flex items-center gap-1.5 text-slate-700 dark:text-slate-200"><span className="h-2 w-2 rounded-full bg-rose-600" />{absentCount} absent</span>
-            <span className="inline-flex items-center gap-1.5 text-slate-500 dark:text-slate-400"><span className="h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-600" />{unmarkedCount} unmarked</span>
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
+            <span className="font-semibold tabular-nums text-slate-900 dark:text-slate-100">{presentCount} of {members.length} present</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">{absentCount} absent <span aria-hidden="true">·</span> {unmarkedCount} unmarked</span>
           </div>
         </div>
         {members.length > 0 && <button onClick={handleMarkAllAbsent} disabled={isPending} className="button-quiet self-start text-xs text-red-700 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/40 sm:self-auto">Mark all absent</button>}

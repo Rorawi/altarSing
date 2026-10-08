@@ -26,6 +26,7 @@ import {
   updateRehearsalSong,
   reorderSessionItems,
   updateSessionProgramDate,
+  setRehearsalSessionClosed,
   addMedleyGroup,
   deleteMedleyGroup,
   renameMedleyGroup,
@@ -142,6 +143,13 @@ export default function SessionDetailClient({
     });
   }
 
+  function handleToggleSessionClosed() {
+    startTransition(async () => {
+      await setRehearsalSessionClosed(session.id, !session.is_closed);
+      router.refresh();
+    });
+  }
+
   function handleDeleteSong(id: string, title: string) {
     if (!confirm(`Remove "${title}" from this session?`)) return;
     startTransition(async () => {
@@ -214,7 +222,7 @@ export default function SessionDetailClient({
     <CollectionsContext.Provider value={collections}>
     <div>
       {/* Header */}
-      <div className="flex items-start gap-3 mb-5">
+      <div className="mb-5 flex items-start gap-3">
         <Link
           href="/rehearsal"
           className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-1 -ml-1 mt-0.5 shrink-0"
@@ -222,95 +230,35 @@ export default function SessionDetailClient({
           <Icon name="arrow-left" size={20} />
         </Link>
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 leading-snug">
+          <h1 className="font-serif text-2xl font-semibold text-slate-950 dark:text-slate-100 leading-snug">
             {session.name}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{formattedDate}</p>
-          {session.notes && (
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5 italic leading-relaxed">
-              {session.notes}
-            </p>
-          )}
+          {session.is_closed && <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">Closed session · songs kept for review</p>}
         </div>
-      </div>
-
-      {/* Program Date card */}
-      <div className="mb-5 border-y border-slate-200 py-4 dark:border-slate-800">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-0.5">
-              Program Date
-            </p>
-            {session.program_converted ? (
-              <p className="text-sm text-green-600 dark:text-green-400 font-medium">
-                ✓ Auto-logged on{' '}
-                {new Date(session.program_date! + 'T00:00:00').toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
-              </p>
-            ) : session.program_date ? (
-              <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">
-                <Icon name="calendar" size={15} className="mr-1 inline-block" />
-                {new Date(session.program_date + 'T00:00:00').toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
-              </p>
-            ) : (
-              <p className="text-sm text-slate-400 dark:text-slate-500">Not scheduled</p>
-            )}
-          </div>
-          {!session.program_converted && (
-            <button
-              onClick={() => setEditingProgramDate((v) => !v)}
-              className="text-xs text-violet-600 dark:text-violet-400 hover:underline shrink-0"
-            >
-              {session.program_date ? 'Change' : 'Set date'}
-            </button>
-          )}
-        </div>
-
-        {editingProgramDate && (
-          <div className="mt-3 flex gap-2 items-center">
-            <input
-              type="date"
-              value={programDateInput}
-              onChange={(e) => setProgramDateInput(e.target.value)}
-              className="flex-1 border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
-            />
-            <button
-              onClick={handleSaveProgramDate}
-              disabled={isPending}
-              className="button-primary min-h-9 shrink-0 px-3"
-            >
-              Save
-            </button>
-            {session.program_date && (
-              <button
-                onClick={handleClearProgramDate}
-                disabled={isPending}
-                className="text-xs text-slate-400 hover:text-red-400 transition-colors shrink-0"
-              >
-                Remove
-              </button>
-            )}
-          </div>
-        )}
+        <button
+          onClick={handleToggleSessionClosed}
+          disabled={isPending}
+          className="button-secondary min-h-9 shrink-0 px-3 text-xs"
+        >
+          <Icon name={session.is_closed ? 'history' : 'check'} size={15} />
+          {session.is_closed ? 'Reopen' : 'Close session'}
+        </button>
       </div>
 
       {/* Song count + Add button */}
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          {totalSongCount} song{totalSongCount !== 1 ? 's' : ''} in this session
-        </p>
+      <div className="mb-3 flex items-center justify-between border-b border-slate-200 pb-2 dark:border-slate-800">
+        <div>
+          <h2 className="font-serif text-lg font-semibold text-slate-950 dark:text-slate-100">Rehearsal set</h2>
+          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+            {totalSongCount} song{totalSongCount !== 1 ? 's' : ''}
+          </p>
+        </div>
         <button
           onClick={() => setAddMode(addMode ? null : 'picker')}
-          className="button-primary"
+          className="button-secondary"
         >
-          {addMode ? 'Cancel' : '+ Add Song'}
+          <Icon name={addMode ? 'close' : 'plus'} size={16} />{addMode ? 'Cancel' : 'Add song'}
         </button>
       </div>
 
@@ -440,6 +388,53 @@ export default function SessionDetailClient({
             </div>
           </SortableContext>
         </DndContext>
+      )}
+
+      {(session.program_date || editingProgramDate || session.notes || !session.program_converted) && (
+        <section className="mt-7 border-t border-slate-200 pt-4 dark:border-slate-800">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Service plan</p>
+              {session.program_converted ? (
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                  Logged on {new Date(session.program_date! + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </p>
+              ) : session.program_date ? (
+                <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-200">
+                  <Icon name="calendar" size={15} />
+                  {new Date(session.program_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </p>
+              ) : (
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">No service date set</p>
+              )}
+            </div>
+            {!session.program_converted && (
+              <button
+                onClick={() => setEditingProgramDate((value) => !value)}
+                className="button-quiet min-h-8 shrink-0 px-2 text-xs"
+              >
+                {editingProgramDate ? 'Cancel' : session.program_date ? 'Change date' : 'Set date'}
+              </button>
+            )}
+          </div>
+
+          {editingProgramDate && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <input
+                type="date"
+                value={programDateInput}
+                onChange={(event) => setProgramDateInput(event.target.value)}
+                className="field-control max-w-xs"
+              />
+              <button onClick={handleSaveProgramDate} disabled={isPending} className="button-secondary min-h-10">Save date</button>
+              {session.program_date && (
+                <button onClick={handleClearProgramDate} disabled={isPending} className="button-danger-quiet min-h-9">Remove date</button>
+              )}
+            </div>
+          )}
+
+          {session.notes && <p className="mt-4 max-w-3xl whitespace-pre-wrap text-sm leading-relaxed text-slate-600 dark:text-slate-300">{session.notes}</p>}
+        </section>
       )}
     </div>
     </CollectionsContext.Provider>
@@ -575,9 +570,12 @@ function StandaloneSongCard({
           <span className="shrink-0 w-7 text-center font-mono text-xs tabular-nums text-slate-400 dark:text-slate-500">
             {position}
           </span>
-          <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm leading-snug flex-1 min-w-0 break-words">
+          <p className="font-serif font-medium text-slate-950 dark:text-slate-100 text-base leading-snug flex-1 min-w-0 break-words">
             {song.song_title}
           </p>
+          <span className="min-w-8 shrink-0 text-right font-serif text-lg font-semibold tabular-nums text-slate-900 dark:text-slate-100">
+            {song.key_used || '—'}
+          </span>
           {/* Three-dot menu */}
           <div className="relative shrink-0" ref={menuRef}>
             <button
@@ -621,11 +619,6 @@ function StandaloneSongCard({
 
         {/* Bottom row: key, run-throughs, leaders, lyrics pill */}
         <div className="flex items-center gap-x-2 gap-y-1 mt-1 ml-10 flex-wrap text-xs">
-          {song.key_used && (
-            <span className="font-semibold tabular-nums text-violet-900 dark:text-violet-200">
-              {song.key_used}
-            </span>
-          )}
           {song.run_throughs > 1 && (
             <span className="text-xs text-slate-500 dark:text-slate-400">
               × {song.run_throughs}

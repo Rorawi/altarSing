@@ -9,7 +9,7 @@ async function RehearsalContent() {
   const [{ data: sessions }, { data: harmonies }] = await Promise.all([
     supabase
       .from('rehearsal_sessions')
-      .select('*, rehearsal_songs(id, song_title, key_used, position)')
+      .select('*, rehearsal_songs(id, song_title, key_used, position, service_moment)')
       .order('date', { ascending: false }),
     supabase
       .from('harmony_patterns')

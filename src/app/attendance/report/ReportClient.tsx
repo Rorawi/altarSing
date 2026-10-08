@@ -9,18 +9,8 @@ import Icon from '@/components/Icon';
 
 type MemberWithStatus = ChoirMember & { attendance: AttendanceRecord | null };
 
-const AVATAR_COLORS = [
-  'bg-violet-500', 'bg-blue-500', 'bg-green-500', 'bg-amber-500',
-  'bg-pink-500', 'bg-indigo-500', 'bg-teal-500', 'bg-orange-500',
-];
-
 function getInitials(name: string) {
   return name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
-}
-
-function getAvatarColor(name: string) {
-  const hash = name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
 }
 
 export default function ReportClient() {
@@ -107,25 +97,14 @@ export default function ReportClient() {
         </div>
       ) : (
         <>
-          {/* Summary stats */}
-          <div className="grid grid-cols-3 gap-2 mb-5">
-            <div className="bg-green-50 dark:bg-green-900/30 border border-green-100 dark:border-green-800 rounded-xl p-3 text-center">
-              <p className="text-2xl font-bold text-green-700 dark:text-green-400">{presentMembers.length}</p>
-              <p className="text-xs text-green-600 dark:text-green-500">Present</p>
-            </div>
-            <div className="bg-red-50 dark:bg-red-900/30 border border-red-100 dark:border-red-800 rounded-xl p-3 text-center">
-              <p className="text-2xl font-bold text-red-600 dark:text-red-400">{absentMembers.length}</p>
-              <p className="text-xs text-red-500 dark:text-red-400">Absent</p>
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-center">
-              <p className="text-2xl font-bold text-slate-500 dark:text-slate-400">{unmarkedMembers.length}</p>
-              <p className="text-xs text-slate-400 dark:text-slate-500">Unmarked</p>
-            </div>
+          <div className="mb-6 border-y border-slate-200 py-3 text-sm dark:border-slate-800" aria-label="Attendance summary">
+            <span className="font-semibold tabular-nums text-slate-900 dark:text-slate-100">{presentMembers.length} of {members.length} present</span>
+            <span className="ml-3 text-xs text-slate-500 dark:text-slate-400">{absentMembers.length} absent <span aria-hidden="true">·</span> {unmarkedMembers.length} not marked</span>
           </div>
 
           {/* Present section */}
           {presentMembers.length > 0 && (
-            <Section title="Present" count={presentMembers.length} color="green">
+            <Section title="Present" count={presentMembers.length}>
               {presentMembers.map((m) => (
                 <MemberRow key={m.id} member={m} />
               ))}
@@ -134,7 +113,7 @@ export default function ReportClient() {
 
           {/* Absent section */}
           {absentMembers.length > 0 && (
-            <Section title="Absent" count={absentMembers.length} color="red">
+            <Section title="Absent" count={absentMembers.length}>
               {absentMembers.map((m) => (
                 <MemberRow key={m.id} member={m} showReason />
               ))}
@@ -143,7 +122,7 @@ export default function ReportClient() {
 
           {/* Unmarked section */}
           {unmarkedMembers.length > 0 && (
-            <Section title="Not Marked" count={unmarkedMembers.length} color="gray">
+            <Section title="Not marked" count={unmarkedMembers.length}>
               {unmarkedMembers.map((m) => (
                 <MemberRow key={m.id} member={m} />
               ))}
@@ -156,50 +135,37 @@ export default function ReportClient() {
 }
 
 function Section({
-  title, count, color, children,
+  title, count, children,
 }: {
-  title: string; count: number; color: 'green' | 'red' | 'gray'; children: React.ReactNode;
+  title: string; count: number; children: React.ReactNode;
 }) {
-  const colors = {
-    green: 'text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-900/30',
-    red: 'text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/30',
-    gray: 'text-slate-500 bg-slate-100 dark:text-slate-400 dark:bg-slate-700',
-  };
   return (
-    <div className="mb-5">
-      <div className="flex items-center gap-2 mb-2">
-        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${colors[color]}`}>
-          {title} · {count}
-        </span>
-      </div>
-      <div className="space-y-2">{children}</div>
-    </div>
+    <section className="mb-6">
+      <h2 className="mb-2 text-sm font-semibold text-slate-800 dark:text-slate-100">{title} <span className="ml-1 font-normal tabular-nums text-slate-400">{count}</span></h2>
+      <div className="border-y border-slate-200 dark:border-slate-800">{children}</div>
+    </section>
   );
 }
 
 function MemberRow({ member, showReason }: { member: MemberWithStatus; showReason?: boolean }) {
   const absenceReason = (member.attendance as any)?.absence_reason as string | null;
-  const avatarColor = getAvatarColor(member.name);
-  const present = member.attendance?.present;
 
   return (
-    <div className={`flex items-center gap-3 bg-white dark:bg-slate-800 rounded-xl border px-3 py-2.5 ${present === true ? 'border-green-200 dark:border-green-700' : present === false ? 'border-red-200 dark:border-red-700' : 'border-slate-200 dark:border-slate-700'}`}>
-      <div className="w-9 h-9 rounded-full overflow-hidden shrink-0">
+    <div className="flex items-center gap-3 border-b border-slate-200 px-3 py-2.5 last:border-0 dark:border-slate-800">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-stone-100 dark:border-slate-700 dark:bg-slate-800">
         {member.image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={member.image_url} alt={member.name} className="w-full h-full object-cover" />
         ) : (
-          <div className={`w-full h-full ${avatarColor} flex items-center justify-center`}>
-            <span className="text-white font-bold text-xs">{getInitials(member.name)}</span>
+          <div className="flex h-full w-full items-center justify-center">
+            <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">{getInitials(member.name)}</span>
           </div>
         )}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{member.name}</p>
         {member.role && <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{member.role}</p>}
-        {showReason && absenceReason && (
-          <p className="text-xs text-red-500 dark:text-red-400 mt-0.5">{absenceReason}</p>
-        )}
+        {showReason && absenceReason && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{absenceReason}</p>}
       </div>
     </div>
   );

@@ -9,18 +9,8 @@ interface Props {
   history: AttendanceRecord[];
 }
 
-const AVATAR_COLORS = [
-  'bg-violet-500', 'bg-blue-500', 'bg-green-500', 'bg-amber-500',
-  'bg-pink-500', 'bg-indigo-500', 'bg-teal-500', 'bg-orange-500',
-];
-
 function getInitials(name: string) {
   return name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
-}
-
-function getAvatarColor(name: string) {
-  const hash = name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
 }
 
 export default function MemberHistoryClient({ member, history }: Props) {
@@ -30,7 +20,6 @@ export default function MemberHistoryClient({ member, history }: Props) {
   const presentCount = history.filter((h) => h.present).length;
   const absentCount = history.filter((h) => !h.present).length;
   const attendanceRate = totalSessions > 0 ? Math.round((presentCount / totalSessions) * 100) : 0;
-  const avatarColor = getAvatarColor(member.name);
 
   // Group history by month for better readability
   const grouped = history.reduce<Record<string, AttendanceRecord[]>>((acc, record) => {
@@ -55,46 +44,26 @@ export default function MemberHistoryClient({ member, history }: Props) {
         <span className="text-sm font-medium">Attendance</span>
       </button>
 
-      {/* Member header card */}
-      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 shadow-sm mb-4 flex items-center gap-4">
-        <div className="w-16 h-16 rounded-full overflow-hidden shadow-md shrink-0">
+      <div className="mb-5 flex items-center gap-4 border-b border-slate-200 pb-4 dark:border-slate-800">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-stone-100 dark:border-slate-700 dark:bg-slate-800">
           {member.image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={member.image_url} alt={member.name} className="w-full h-full object-cover" />
           ) : (
-            <div className={`w-full h-full ${avatarColor} flex items-center justify-center`}>
-              <span className="text-white font-bold text-lg">{getInitials(member.name)}</span>
+            <div className="flex h-full w-full items-center justify-center">
+              <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">{getInitials(member.name)}</span>
             </div>
           )}
         </div>
         <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">{member.name}</h1>
+          <h1 className="font-serif text-2xl font-semibold text-slate-950 dark:text-slate-100">{member.name}</h1>
           {member.role && <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{member.role}</p>}
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-2 mb-5">
-        <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-center">
-          <p className="text-lg font-bold text-slate-700 dark:text-slate-300">{totalSessions}</p>
-          <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">Sessions</p>
-        </div>
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 rounded-xl p-2.5 text-center">
-          <p className="text-lg font-bold text-green-700 dark:text-green-400">{presentCount}</p>
-          <p className="text-[10px] text-green-600 dark:text-green-500 leading-tight">Present</p>
-        </div>
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-xl p-2.5 text-center">
-          <p className="text-lg font-bold text-red-600 dark:text-red-400">{absentCount}</p>
-          <p className="text-[10px] text-red-500 dark:text-red-400 leading-tight">Absent</p>
-        </div>
-        <div className={`rounded-xl p-2.5 text-center border ${attendanceRate >= 75 ? 'bg-green-50 border-green-100' : attendanceRate >= 50 ? 'bg-amber-50 border-amber-100' : 'bg-red-50 border-red-100'}`}>
-          <p className={`text-lg font-bold ${attendanceRate >= 75 ? 'text-green-700' : attendanceRate >= 50 ? 'text-amber-700' : 'text-red-600'}`}>
-            {attendanceRate}%
-          </p>
-          <p className={`text-[10px] leading-tight ${attendanceRate >= 75 ? 'text-green-600' : attendanceRate >= 50 ? 'text-amber-600' : 'text-red-500'}`}>
-            Rate
-          </p>
-        </div>
+      <div className="mb-6 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-slate-200 pb-4 text-sm dark:border-slate-800">
+        <span className="font-semibold tabular-nums text-slate-900 dark:text-slate-100">{attendanceRate}% attendance</span>
+        <span className="text-xs text-slate-500 dark:text-slate-400">{presentCount} present <span aria-hidden="true">·</span> {absentCount} absent <span aria-hidden="true">·</span> {totalSessions} sessions</span>
       </div>
 
       {/* History */}
@@ -107,10 +76,10 @@ export default function MemberHistoryClient({ member, history }: Props) {
         <div className="space-y-5">
           {Object.entries(grouped).map(([month, records]) => (
             <div key={month}>
-              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
+              <h2 className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
                 {month}
-              </p>
-              <div className="space-y-2">
+              </h2>
+              <div className="border-y border-slate-200 dark:border-slate-800">
                 {records.map((record) => {
                   const absenceReason = (record as any).absence_reason as string | null;
                   const dateStr = new Date(record.session_date + 'T00:00:00').toLocaleDateString('en-US', {
@@ -119,12 +88,10 @@ export default function MemberHistoryClient({ member, history }: Props) {
                   return (
                     <div
                       key={record.id}
-                      className={`flex items-center gap-3 bg-white dark:bg-slate-800 rounded-xl border px-4 py-3 ${
-                        record.present ? 'border-green-200 dark:border-green-700' : 'border-red-200 dark:border-red-700'
-                      }`}
+                      className="flex items-center gap-3 border-b border-slate-200 px-3 py-3 last:border-0 dark:border-slate-800"
                     >
                       {/* Status dot */}
-                      <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${record.present ? 'bg-green-400' : 'bg-red-400'}`} />
+                      <div className={`h-2 w-2 shrink-0 rounded-full ${record.present ? 'bg-emerald-600' : 'bg-slate-400 dark:bg-slate-500'}`} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{dateStr}</p>
                         {!record.present && absenceReason && (
@@ -134,9 +101,7 @@ export default function MemberHistoryClient({ member, history }: Props) {
                           <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 italic">{record.notes}</p>
                         )}
                       </div>
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                        record.present ? 'text-green-700 bg-green-100' : 'text-red-600 bg-red-100'
-                      }`}>
+                      <span className={`text-xs font-medium ${record.present ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-500 dark:text-slate-400'}`}>
                         {record.present ? 'Present' : 'Absent'}
                       </span>
                     </div>

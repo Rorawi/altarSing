@@ -47,10 +47,10 @@ export default function SongCard({
       : 'text-slate-500 dark:text-slate-400';
 
   return (
-    <article className={`border-b border-slate-200 px-4 py-4 transition-colors last:border-b-0 hover:bg-slate-50/80 dark:border-slate-800 dark:hover:bg-slate-950/60 sm:px-5 ${isPending ? 'pointer-events-none opacity-60' : ''}`}>
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.45fr)_minmax(150px,1fr)_minmax(130px,.85fr)_auto] xl:items-center xl:gap-4">
+    <article className={`border-b border-slate-200 px-4 py-4 transition-colors last:border-b-0 hover:bg-stone-100/70 dark:border-slate-800 dark:hover:bg-slate-900/60 sm:px-5 ${isPending ? 'pointer-events-none opacity-60' : ''}`}>
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(150px,1fr)_minmax(130px,.85fr)_auto] lg:items-center lg:gap-4">
         <div className="min-w-0">
-          <h3 className="break-words text-[15px] font-semibold leading-snug text-slate-950 dark:text-slate-100">
+          <h3 className="break-words font-serif text-base font-semibold leading-snug text-slate-950 dark:text-slate-100">
             <Link href={`/library/${song.id}`} className="rounded-sm hover:text-violet-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:hover:text-violet-300">
               {song.title}
             </Link>
@@ -62,7 +62,7 @@ export default function SongCard({
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-600 dark:text-slate-300 md:block md:space-y-1">
           <p className="flex items-baseline gap-2">
             <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 dark:text-slate-500">Key</span>
-            <span className="font-semibold tabular-nums text-violet-900 dark:text-violet-200">{song.musical_key || '—'}</span>
+            <span className="font-serif text-sm font-semibold tabular-nums text-slate-900 dark:text-slate-100">{song.musical_key || '—'}</span>
             {song.tempo && <><span className="text-slate-300 dark:text-slate-700">·</span><span>{song.tempo}</span></>}
           </p>
           {song.categories.length > 0 && <p className="min-w-0 truncate text-slate-500 dark:text-slate-400">{song.categories.join(' · ')}</p>}
@@ -72,17 +72,17 @@ export default function SongCard({
           <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${song.rehearsal_status === 'complete' ? 'bg-emerald-600' : song.rehearsal_status === 'rehearsing' ? 'bg-violet-700' : 'bg-slate-300 dark:bg-slate-600'}`} />
           <span className={`text-xs font-medium ${statusColor}`}>{statusLabel}</span>
           {song.rehearsal_status === 'none' ? (
-          <button onClick={() => handleStatusChange('rehearsing')} className="button-quiet ml-auto min-h-8 px-2 text-xs xl:ml-0" disabled={isPending}>Start</button>
+          <button onClick={() => handleStatusChange('rehearsing')} className="button-quiet ml-auto min-h-8 px-2 text-xs lg:ml-0" disabled={isPending}>Start</button>
           ) : song.rehearsal_status === 'rehearsing' ? (
-            <button onClick={() => handleStatusChange('complete')} className="button-quiet ml-auto min-h-8 px-2 text-xs text-emerald-700 dark:text-emerald-300 xl:ml-0" disabled={isPending}>Complete</button>
+            <button onClick={() => handleStatusChange('complete')} className="button-quiet ml-auto min-h-8 px-2 text-xs text-emerald-700 dark:text-emerald-300 lg:ml-0" disabled={isPending}>Complete</button>
           ) : (
-            <button onClick={() => handleStatusChange('none')} className="button-quiet ml-auto min-h-8 px-2 text-xs xl:ml-0" disabled={isPending}>Reset</button>
+            <button onClick={() => handleStatusChange('none')} className="button-quiet ml-auto min-h-8 px-2 text-xs lg:ml-0" disabled={isPending}>Reset</button>
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-1 border-t border-slate-100 pt-2 xl:border-0 xl:pt-0">
-          {onAddToCollection && <button onClick={onAddToCollection} className="button-quiet min-h-8 px-2 text-xs" title="Add to a collection" aria-label={`Add ${song.title} to a collection`}><Icon name="plus" size={15} /><span className="xl:hidden 2xl:inline">Collection</span></button>}
-          {song.lyrics && <button onClick={() => setLyricsOpen(true)} className="button-quiet min-h-8 px-2 text-xs" title="View lyrics"><Icon name="lyrics" size={15} /><span className="xl:hidden 2xl:inline">Lyrics</span></button>}
+        <div className="flex items-center justify-end gap-1 border-t border-slate-100 pt-2 lg:border-0 lg:pt-0">
+          {onAddToCollection && <button onClick={onAddToCollection} className="button-quiet min-h-8 px-2 text-xs" title="Add to a collection" aria-label={`Add ${song.title} to a collection`}><Icon name="plus" size={15} /><span className="lg:hidden 2xl:inline">Collection</span></button>}
+          {song.lyrics && <button onClick={() => setLyricsOpen(true)} className="button-quiet min-h-8 px-2 text-xs" title="View lyrics"><Icon name="lyrics" size={15} /><span className="lg:hidden 2xl:inline">Lyrics</span></button>}
           <Link href={`/library/${song.id}`} className="icon-button h-8 w-8" title="Edit song" aria-label={`Edit ${song.title}`}><Icon name="edit" size={15} /></Link>
           <button onClick={() => setShowDeleteConfirm((value) => !value)} className="icon-button h-8 w-8 hover:text-red-700 dark:hover:text-red-300" title="Delete song" aria-label={`Delete ${song.title}`}><Icon name="trash" size={15} /></button>
         </div>

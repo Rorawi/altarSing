@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS rehearsal_sessions (
   date       DATE        NOT NULL,
   name       TEXT        NOT NULL,
   notes      TEXT,
+  is_closed  BOOLEAN     NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
@@ -153,6 +154,12 @@ ALTER TABLE service_logs ADD COLUMN IF NOT EXISTS reviewed             BOOLEAN N
 ALTER TABLE rehearsal_sessions ADD COLUMN IF NOT EXISTS program_date       DATE;
 ALTER TABLE rehearsal_sessions ADD COLUMN IF NOT EXISTS program_converted  BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE rehearsal_sessions ADD COLUMN IF NOT EXISTS program_log_id     UUID;
+
+-- Close completed plans without deleting their rehearsal songs or history.
+ALTER TABLE rehearsal_sessions ADD COLUMN IF NOT EXISTS is_closed BOOLEAN NOT NULL DEFAULT false;
+
+-- Make the new column visible to Supabase's PostgREST schema cache.
+NOTIFY pgrst, 'reload schema';
 
 -- Migrate existing single-song service_logs into the songs JSONB array
 UPDATE service_logs

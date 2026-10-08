@@ -18,11 +18,6 @@ export default function Navigation({ variant }: { variant: 'bottom' | 'side' }) 
 
   return (
     <nav aria-label="Primary navigation" className={variant === 'side' ? 'w-full' : 'w-full'}>
-      {variant === 'side' && (
-        <p className="hidden lg:block px-4 mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
-          Workspace
-        </p>
-      )}
       <ul className={variant === 'side' ? 'space-y-1' : 'flex'}>
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);

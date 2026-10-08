@@ -77,6 +77,7 @@ export interface RehearsalSession {
   program_date: string | null;
   program_converted: boolean;
   program_log_id: string | null;
+  is_closed: boolean;
   created_at: string;
 }
 
@@ -116,7 +117,7 @@ export interface HarmonyPattern {
 }
 
 export interface RehearsalSessionWithSongs extends RehearsalSession {
-  rehearsal_songs: Pick<RehearsalSong, 'id' | 'song_title' | 'key_used' | 'position'>[];
+  rehearsal_songs: Pick<RehearsalSong, 'id' | 'song_title' | 'key_used' | 'position' | 'service_moment'>[];
 }
 
 // ─── COLLECTIONS ─────────────────────────────────────────────────────────────

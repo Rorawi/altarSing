@@ -271,6 +271,17 @@ export async function deleteRehearsalSession(id: string) {
   revalidatePath('/rehearsal');
 }
 
+export async function setRehearsalSessionClosed(id: string, isClosed: boolean) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('rehearsal_sessions')
+    .update({ is_closed: isClosed })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/rehearsal');
+  revalidatePath(`/rehearsal/${id}`);
+}
+
 export async function addRehearsalSong(
   sessionId: string,
   data: {
