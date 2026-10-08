@@ -10,7 +10,9 @@ import {
   updateRehearsalSongLyrics,
   getSongYoutubeLink,
 } from '@/lib/actions';
-import { useYouTubePlayer } from '@/lib/youtube-player-context';
+import { getYouTubeId, useYouTubePlayer } from '@/lib/youtube-player-context';
+import ExternalMediaLink from '@/components/ExternalMediaLink';
+import Icon from '@/components/Icon';
 
 interface LyricsModalProps {
   isOpen: boolean;
@@ -150,6 +152,7 @@ export default function LyricsModal({
       (rehearsalSongId && activeSong.rehearsalSongId === rehearsalSongId) ||
       (collectionSongId && activeSong.collectionSongId === collectionSongId))
   );
+  const canPlayOnYouTube = Boolean(getYouTubeId(youtubeLink));
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState('');
@@ -378,11 +381,11 @@ export default function LyricsModal({
 
   return (
     <div
-      className="fixed inset-0 z-70 flex items-end bg-black/60"
+      className="fixed inset-0 z-[70] flex items-end justify-center bg-black/55 p-0 sm:items-center sm:p-6"
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-slate-900 rounded-t-3xl w-full max-w-107.5 mx-auto max-h-[88vh] flex flex-col overflow-hidden"
+        className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 sm:rounded-lg"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Sticky header */}
@@ -396,18 +399,19 @@ export default function LyricsModal({
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0 mt-0.5">
-            {youtubeLink && !editing && (
+            {youtubeLink && canPlayOnYouTube && !editing && (
               <button
                 onClick={handlePlayYouTube}
-                className="text-xs px-2.5 py-1.5 rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white transition-all flex items-center gap-1 shadow-sm shrink-0"
+                className="button-secondary min-h-8 shrink-0 px-2.5 text-xs"
                 title="Play YouTube Audio"
               >
-                <span>▶</span> Play
+                <Icon name="play" size={15} />Play
               </button>
             )}
+            {youtubeLink && !canPlayOnYouTube && !editing && <ExternalMediaLink href={youtubeLink} />}
             {!youtubeLink && !loading && !editing && (
-              <span className="text-[10px] text-slate-400 dark:text-slate-500 italic mr-1 select-none shrink-0">
-                No link
+              <span className="text-xs text-slate-400 dark:text-slate-500">
+                No reference link
               </span>
             )}
             {lyrics && !editing && (
@@ -419,14 +423,15 @@ export default function LyricsModal({
                     : 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-900/50'
                 }`}
               >
-                {copied ? '✓ Copied!' : '📋 Copy'}
+                {copied ? 'Copied' : 'Copy lyrics'}
               </button>
             )}
             <button
               onClick={onClose}
-              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-2xl leading-none w-8 h-8 flex items-center justify-center"
+              className="icon-button"
+              aria-label="Close lyrics"
             >
-              ×
+              <Icon name="close" size={17} />
             </button>
           </div>
         </div>
@@ -569,7 +574,7 @@ export default function LyricsModal({
             <RenderFormattedLyrics text={lyrics} />
           ) : (
             <div className="text-center py-14">
-              <p className="text-4xl mb-3">🎵</p>
+              <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400"><Icon name="lyrics" /></div>
               <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
                 No lyrics added yet
               </p>
@@ -605,7 +610,7 @@ export default function LyricsModal({
                   onClick={() => { setEditText(lyrics ?? ''); setEditing(true); }}
                   className="w-full border border-dashed border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 rounded-xl py-2.5 text-sm hover:border-violet-400 hover:text-violet-600 dark:hover:border-violet-500 dark:hover:text-violet-400 transition-colors"
                 >
-                  {lyrics ? '✏️ Edit Lyrics' : '+ Add Lyrics'}
+                  {lyrics ? 'Edit lyrics' : 'Add lyrics'}
                 </button>
               )}
             </div>

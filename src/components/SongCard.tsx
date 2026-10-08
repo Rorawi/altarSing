@@ -4,13 +4,10 @@ import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Song } from '@/types';
-import {
-  REHEARSAL_STATUS_LABELS,
-  REHEARSAL_STATUS_COLORS,
-  CATEGORY_COLORS,
-} from '@/lib/constants';
 import { updateRehearsalStatus, deleteSong } from '@/lib/actions';
 import LyricsModal from '@/components/LyricsModal';
+import Icon from '@/components/Icon';
+import ExternalMediaLink from '@/components/ExternalMediaLink';
 
 export default function SongCard({
   song,
@@ -38,123 +35,68 @@ export default function SongCard({
     });
   }
 
-  const statusColor = REHEARSAL_STATUS_COLORS[song.rehearsal_status] ?? 'bg-gray-100 text-gray-500';
-  const statusLabel = REHEARSAL_STATUS_LABELS[song.rehearsal_status] ?? song.rehearsal_status;
+  const statusLabel = song.rehearsal_status === 'complete'
+    ? 'Rehearsed'
+    : song.rehearsal_status === 'rehearsing'
+      ? 'In rehearsal'
+      : 'Not in rehearsal';
+  const statusColor = song.rehearsal_status === 'complete'
+    ? 'text-emerald-700 dark:text-emerald-300'
+    : song.rehearsal_status === 'rehearsing'
+      ? 'text-violet-800 dark:text-violet-300'
+      : 'text-slate-500 dark:text-slate-400';
 
   return (
-    <div
-      className={`bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden transition-opacity ${isPending ? 'opacity-60 pointer-events-none' : ''}`}
-    >
-      <div className="p-4">
-        {/* Header row */}
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-base leading-snug flex-1 min-w-0">
-            {song.title}
+    <article className={`border-b border-slate-200 px-4 py-4 transition-colors last:border-b-0 hover:bg-slate-50/80 dark:border-slate-800 dark:hover:bg-slate-950/60 sm:px-5 ${isPending ? 'pointer-events-none opacity-60' : ''}`}>
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.45fr)_minmax(150px,1fr)_minmax(130px,.85fr)_auto] xl:items-center xl:gap-4">
+        <div className="min-w-0">
+          <h3 className="break-words text-[15px] font-semibold leading-snug text-slate-950 dark:text-slate-100">
+            <Link href={`/library/${song.id}`} className="rounded-sm hover:text-violet-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:hover:text-violet-300">
+              {song.title}
+            </Link>
           </h3>
-          <Link
-            href={`/library/${song.id}`}
-            className="shrink-0 text-slate-300 hover:text-violet-500 transition-colors p-1 -mr-1"
-            title="Edit song"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-          </Link>
+          {song.notes && <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{song.notes}</p>}
+          {song.youtube_link && <ExternalMediaLink href={song.youtube_link} className="mt-1" />}
         </div>
 
-        {/* Badges */}
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {song.musical_key && (
-            <span className="bg-violet-600 text-white text-xs font-bold px-2 py-0.5 rounded-lg">
-              {song.musical_key}
-            </span>
-          )}
-          {song.tempo && (
-            <span className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs px-2 py-0.5 rounded-lg">
-              {song.tempo}
-            </span>
-          )}
-          {song.categories.map((cat) => (
-            <span
-              key={cat}
-              className={`text-xs px-2 py-0.5 rounded-lg ${CATEGORY_COLORS[cat] ?? 'bg-indigo-50 text-indigo-700'}`}
-            >
-              {cat}
-            </span>
-          ))}
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-600 dark:text-slate-300 md:block md:space-y-1">
+          <p className="flex items-baseline gap-2">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 dark:text-slate-500">Key</span>
+            <span className="font-semibold tabular-nums text-violet-900 dark:text-violet-200">{song.musical_key || '—'}</span>
+            {song.tempo && <><span className="text-slate-300 dark:text-slate-700">·</span><span>{song.tempo}</span></>}
+          </p>
+          {song.categories.length > 0 && <p className="min-w-0 truncate text-slate-500 dark:text-slate-400">{song.categories.join(' · ')}</p>}
         </div>
 
-        {/* Notes preview */}
-        {song.notes && (
-          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-3 leading-relaxed">{song.notes}</p>
-        )}
+        <div className="flex min-w-0 items-center gap-2">
+          <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${song.rehearsal_status === 'complete' ? 'bg-emerald-600' : song.rehearsal_status === 'rehearsing' ? 'bg-violet-700' : 'bg-slate-300 dark:bg-slate-600'}`} />
+          <span className={`text-xs font-medium ${statusColor}`}>{statusLabel}</span>
+          {song.rehearsal_status === 'none' ? (
+          <button onClick={() => handleStatusChange('rehearsing')} className="button-quiet ml-auto min-h-8 px-2 text-xs xl:ml-0" disabled={isPending}>Start</button>
+          ) : song.rehearsal_status === 'rehearsing' ? (
+            <button onClick={() => handleStatusChange('complete')} className="button-quiet ml-auto min-h-8 px-2 text-xs text-emerald-700 dark:text-emerald-300 xl:ml-0" disabled={isPending}>Complete</button>
+          ) : (
+            <button onClick={() => handleStatusChange('none')} className="button-quiet ml-auto min-h-8 px-2 text-xs xl:ml-0" disabled={isPending}>Reset</button>
+          )}
+        </div>
 
-        {/* YouTube link */}
-        {song.youtube_link && (
-          <a
-            href={song.youtube_link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs text-violet-600 hover:text-violet-800 font-medium mb-3"
-          >
-            <span>▶</span> Play on YouTube
-          </a>
-        )}
-
-        {/* Rehearsal status row */}
-        <div className="flex items-center gap-2 pt-3 border-t border-slate-100 dark:border-slate-700">
-          <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusColor}`}>
-            {statusLabel}
-          </span>
-          <div className="ml-auto flex items-center gap-2">
-            {onAddToCollection && (
-              <button
-                onClick={onAddToCollection}
-                className="text-xs text-violet-500 hover:text-violet-700 dark:hover:text-violet-300 font-medium transition-colors"
-                title="Add to a collection"
-              >
-                + Collection
-              </button>
-            )}
-            {song.lyrics && (
-              <button
-                onClick={() => setLyricsOpen(true)}
-                className="text-xs text-slate-400 hover:text-violet-500 dark:hover:text-violet-300 font-medium transition-colors"
-                title="View lyrics"
-              >
-                Lyrics
-              </button>
-            )}
-            {song.rehearsal_status !== 'rehearsing' && (
-              <button
-                onClick={() => handleStatusChange('rehearsing')}
-                disabled={isPending}
-                className="text-xs text-amber-600 hover:text-amber-800 font-medium disabled:opacity-50 transition-colors"
-              >
-                Rehearsing
-              </button>
-            )}
-            {song.rehearsal_status === 'rehearsing' && (
-              <button
-                onClick={() => handleStatusChange('complete')}
-                disabled={isPending}
-                className="text-xs text-green-600 hover:text-green-800 font-medium disabled:opacity-50 transition-colors"
-              >
-                ✓ Complete
-              </button>
-            )}
-            {song.rehearsal_status !== 'none' && (
-              <button
-                onClick={() => handleStatusChange('none')}
-                disabled={isPending}
-                className="text-xs text-slate-400 hover:text-slate-600 disabled:opacity-50 transition-colors"
-              >
-                Clear
-              </button>
-            )}
-          </div>
+        <div className="flex items-center justify-end gap-1 border-t border-slate-100 pt-2 xl:border-0 xl:pt-0">
+          {onAddToCollection && <button onClick={onAddToCollection} className="button-quiet min-h-8 px-2 text-xs" title="Add to a collection" aria-label={`Add ${song.title} to a collection`}><Icon name="plus" size={15} /><span className="xl:hidden 2xl:inline">Collection</span></button>}
+          {song.lyrics && <button onClick={() => setLyricsOpen(true)} className="button-quiet min-h-8 px-2 text-xs" title="View lyrics"><Icon name="lyrics" size={15} /><span className="xl:hidden 2xl:inline">Lyrics</span></button>}
+          <Link href={`/library/${song.id}`} className="icon-button h-8 w-8" title="Edit song" aria-label={`Edit ${song.title}`}><Icon name="edit" size={15} /></Link>
+          <button onClick={() => setShowDeleteConfirm((value) => !value)} className="icon-button h-8 w-8 hover:text-red-700 dark:hover:text-red-300" title="Delete song" aria-label={`Delete ${song.title}`}><Icon name="trash" size={15} /></button>
         </div>
       </div>
+
+      {showDeleteConfirm && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-red-200 pt-3 text-sm dark:border-red-900">
+          <p className="text-slate-700 dark:text-slate-300">Remove <span className="font-semibold">{song.title}</span> from the library?</p>
+          <div className="flex gap-2">
+            <button onClick={() => setShowDeleteConfirm(false)} className="button-secondary min-h-9">Cancel</button>
+            <button onClick={handleDelete} disabled={isPending} className="button-danger-quiet min-h-9">Delete song</button>
+          </div>
+        </div>
+      )}
 
       <LyricsModal
         isOpen={lyricsOpen}
@@ -164,34 +106,6 @@ export default function SongCard({
         initialLyrics={song.lyrics}
         youtubeLink={song.youtube_link}
       />
-
-      {/* Delete area */}
-      {showDeleteConfirm ? (
-        <div className="px-4 pb-4 flex gap-2 border-t border-slate-100 dark:border-slate-700 pt-3">
-          <button
-            onClick={() => setShowDeleteConfirm(false)}
-            className="flex-1 text-xs border border-slate-300 dark:border-slate-600 rounded-xl py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleDelete}
-            disabled={isPending}
-            className="flex-1 text-xs bg-red-600 text-white rounded-xl py-2 font-medium hover:bg-red-700 disabled:opacity-50"
-          >
-            Yes, Delete
-          </button>
-        </div>
-      ) : (
-        <div className="px-4 pb-3 border-t border-slate-50 dark:border-slate-700 pt-2 flex justify-end">
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            className="text-xs text-slate-300 dark:text-slate-600 hover:text-red-400 dark:hover:text-red-400 transition-colors"
-          >
-            Delete
-          </button>
-        </div>
-      )}
-    </div>
+    </article>
   );
 }

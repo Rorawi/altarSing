@@ -4,6 +4,8 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import SongForm from '@/components/SongForm';
 import { addSong } from '@/lib/actions';
+import PageHeader from '@/components/PageHeader';
+import Icon from '@/components/Icon';
 
 function isVideoUrl(url: string) {
   return (
@@ -40,44 +42,27 @@ export default function QuickAddPage() {
   if (step === 'fill') {
     return (
       <div>
-        <div className="flex items-center gap-3 mb-6">
-          <button
-            onClick={() => setStep('paste')}
-            className="text-slate-400 hover:text-slate-600 transition-colors p-1 -ml-1"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Song Details</h1>
-            <p className="text-sm text-slate-500">Fill in the details to save to your library</p>
-          </div>
-        </div>
+        <PageHeader title="Song details" description="Fill in the details to save this song to your library." actions={<button onClick={() => setStep('paste')} className="button-secondary"><Icon name="arrow-left" size={16} />Back</button>} />
 
         {/* Link preview */}
         {youtubeLink && (
-          <div className="mb-4 p-3 bg-violet-50 border border-violet-100 rounded-xl flex items-start gap-2">
-            <span className="text-lg mt-0.5">{isYouTube ? '▶️' : '🔗'}</span>
+          <div className="mb-4 flex items-start gap-3 border-l-2 border-violet-700 bg-violet-50/70 p-3 dark:bg-violet-300/5">
+            <Icon name={isYouTube ? 'play' : 'external'} size={17} className="mt-0.5 text-violet-800 dark:text-violet-300" />
             <div className="min-w-0">
               <p className="text-xs font-medium text-violet-700">Link ready to save</p>
               <p className="text-xs text-violet-500 truncate">{youtubeLink}</p>
             </div>
             <button
               onClick={() => setYoutubeLink('')}
-              className="text-violet-300 hover:text-violet-500 shrink-0 text-sm"
+              className="icon-button h-8 w-8 shrink-0"
+              aria-label="Remove link"
             >
-              ✕
+              <Icon name="close" size={15} />
             </button>
           </div>
         )}
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+        <div className="max-w-3xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900 sm:p-7">
           <SongForm
             prefillYoutubeLink={youtubeLink}
             onSubmit={handleSubmit}
@@ -90,17 +75,12 @@ export default function QuickAddPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Quick Add</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Paste a YouTube link to get started, then fill in the details.
-        </p>
-      </div>
+      <PageHeader title="Quick add" description="Add a song from a reference link or enter its details manually." />
 
       {/* Paste area */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm mb-4">
+      <div className="mb-4 max-w-3xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900 sm:p-7">
         <label className="block text-sm font-medium text-slate-700 mb-2">
-          Paste YouTube / Online Link
+          Paste a YouTube or online link
         </label>
         <textarea
           value={youtubeLink}
@@ -108,7 +88,7 @@ export default function QuickAddPage() {
           placeholder="Paste a YouTube link here…&#10;e.g. https://youtube.com/watch?v=..."
           rows={3}
           autoFocus
-          className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
+          className="field-control min-h-24 resize-y"
         />
 
         {/* Detection feedback */}
@@ -120,10 +100,10 @@ export default function QuickAddPage() {
                 : 'bg-amber-50 border border-amber-100 text-amber-700'
             }`}
           >
-            <span>{isValidLink ? '✅' : '⚠️'}</span>
+            <Icon name={isValidLink ? 'check' : 'close'} size={16} />
             <span>
               {isYouTube
-                ? 'YouTube link detected — ready to continue!'
+                ? 'YouTube link detected — ready to continue.'
                 : isValidLink
                   ? 'Link detected — ready to continue!'
                   : 'This does not look like a valid link'}
@@ -134,16 +114,16 @@ export default function QuickAddPage() {
         <div className="flex gap-3 mt-4">
           <button
             onClick={handleContinue}
-            className="flex-1 bg-violet-600 text-white rounded-xl py-3 text-sm font-semibold hover:bg-violet-700 transition-colors"
+            className="button-primary w-full sm:w-auto"
           >
-            {youtubeLink ? 'Continue →' : 'Skip & Add Manually'}
+            {youtubeLink ? 'Continue' : 'Skip and add manually'}
           </button>
         </div>
       </div>
 
       {/* Tip */}
       <p className="text-xs text-slate-400 text-center">
-        💡 Tip: Copy a YouTube link from the Share button and paste it above
+        Tip: Copy a song reference link and paste it above.
       </p>
     </div>
   );

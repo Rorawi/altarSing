@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import SongForm from '@/components/SongForm';
 import { addSong } from '@/lib/actions';
+import PageHeader from '@/components/PageHeader';
+import Icon from '@/components/Icon';
 
 export default function NewSongPage() {
   const router = useRouter();
@@ -14,22 +16,13 @@ export default function NewSongPage() {
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-6">
-        <button
-          onClick={() => router.back()}
-          className="text-slate-400 hover:text-slate-600 transition-colors p-1 -ml-1"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Add New Song</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Fill in the song details</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Add a song"
+        description="Add a song to your music library."
+        actions={<button onClick={() => router.back()} className="button-quiet"><Icon name="arrow-left" size={16} />Back</button>}
+      />
 
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
+      <div className="max-w-3xl border-b border-slate-200 pb-6 dark:border-slate-800">
         <SongForm onSubmit={handleSubmit} submitLabel="Add to Library" />
       </div>
     </div>

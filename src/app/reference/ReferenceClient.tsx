@@ -1,7 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { SONG_CATEGORIES, CATEGORY_COLORS } from '@/lib/constants';
+import { SONG_CATEGORIES } from '@/lib/constants';
+import PageHeader from '@/components/PageHeader';
+import Icon from '@/components/Icon';
+import ExternalMediaLink from '@/components/ExternalMediaLink';
 
 interface SongRef {
   id: string;
@@ -23,31 +26,18 @@ export default function ReferenceClient({ songs }: { songs: SongRef[] }) {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-start justify-between gap-3 mb-4 no-print">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Quick Reference</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            {filtered.length} song{filtered.length !== 1 ? 's' : ''}
-            {filterCategory ? ` in ${filterCategory}` : ''}
-          </p>
-        </div>
-        <button
-          onClick={() => window.print()}
-          className="shrink-0 bg-slate-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-800 transition-colors flex items-center gap-2"
-        >
-          <span>🖨️</span>
-          <span>Print</span>
-        </button>
+      <div className="no-print">
+        <PageHeader title="Quick reference" description={<>{filtered.length} song{filtered.length !== 1 ? 's' : ''}{filterCategory ? ` in ${filterCategory}` : ''}</>} actions={<button onClick={() => window.print()} className="button-secondary"><Icon name="report" size={16} />Print</button>} />
       </div>
 
       {/* Category filter chips */}
       <div className="flex gap-2 overflow-x-auto pb-2 mb-5 no-print scrollbar-none">
         <button
           onClick={() => setFilterCategory('')}
-          className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+          className={`shrink-0 border-b-2 px-1 py-2 text-sm font-medium transition-colors ${
             !filterCategory
-              ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
-              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-violet-300'
+              ? 'border-violet-800 text-violet-900 dark:border-violet-300 dark:text-violet-200'
+              : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'
           }`}
         >
           All Songs
@@ -56,10 +46,10 @@ export default function ReferenceClient({ songs }: { songs: SongRef[] }) {
           <button
             key={cat}
             onClick={() => setFilterCategory(cat)}
-            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+            className={`shrink-0 border-b-2 px-1 py-2 text-sm font-medium transition-colors ${
               filterCategory === cat
-                ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
-                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-violet-300'
+                ? 'border-violet-800 text-violet-900 dark:border-violet-300 dark:text-violet-200'
+                : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'
             }`}
           >
             {cat}
@@ -69,7 +59,7 @@ export default function ReferenceClient({ songs }: { songs: SongRef[] }) {
 
       {/* Print-only header */}
       <div className="hidden print:block mb-6 pb-3 border-b-2 border-slate-300">
-        <h1 className="text-2xl font-bold">🎵 Song Reference Sheet</h1>
+        <h1 className="text-2xl font-bold">AltarSing · Song Reference Sheet</h1>
         {filterCategory && (
           <p className="text-base text-slate-600 mt-1">Category: {filterCategory}</p>
         )}
@@ -86,8 +76,8 @@ export default function ReferenceClient({ songs }: { songs: SongRef[] }) {
 
       {/* Songs table */}
       {filtered.length === 0 ? (
-        <div className="text-center py-20">
-          <p className="text-5xl mb-4">📋</p>
+        <div className="border-y border-slate-200 py-16 text-center dark:border-slate-800">
+          <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400"><Icon name="library" /></div>
           <p className="text-slate-500 dark:text-slate-400 font-medium text-lg">No songs in this category</p>
           <button
             onClick={() => setFilterCategory('')}
@@ -97,13 +87,13 @@ export default function ReferenceClient({ songs }: { songs: SongRef[] }) {
           </button>
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
+        <div className="overflow-hidden border-y border-slate-200 dark:border-slate-800">
           <div className="divide-y divide-slate-100 dark:divide-slate-700">
             {filtered.map((song, i) => (
               <div
                 key={song.id}
                 className={`flex items-center gap-3 px-4 py-3.5 ${
-                  i % 2 === 0 ? 'bg-white dark:bg-slate-800' : 'bg-slate-50/60 dark:bg-slate-700/40'
+                  i % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50/60 dark:bg-slate-950/50'
                 }`}
               >
                 {/* Row number */}
@@ -115,40 +105,21 @@ export default function ReferenceClient({ songs }: { songs: SongRef[] }) {
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm text-slate-900 dark:text-slate-100 leading-tight">{song.title}</p>
                   <div className="flex flex-wrap gap-1 mt-0.5">
-                    {song.categories.map((cat) => (
-                      <span
-                        key={cat}
-                        className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${CATEGORY_COLORS[cat] ?? 'bg-slate-100 text-slate-600'}`}
-                      >
-                        {cat}
-                      </span>
-                    ))}
+                    <span className="text-xs text-slate-500 dark:text-slate-400">{song.categories.join(' · ')}</span>
                   </div>
                 </div>
 
                 {/* Key, Tempo, Link */}
                 <div className="flex items-center gap-2 shrink-0">
                   {song.musical_key && (
-                    <span className="bg-violet-600 text-white text-xs font-bold px-2 py-1 rounded-lg min-w-[2rem] text-center">
+                    <span className="min-w-8 border-l-2 border-violet-700 pl-2 text-sm font-semibold tabular-nums text-violet-900 dark:border-violet-300 dark:text-violet-200">
                       {song.musical_key}
                     </span>
                   )}
                   {song.tempo && (
                     <span className="text-xs text-slate-400 dark:text-slate-500 hidden sm:block">{song.tempo}</span>
                   )}
-                  {song.youtube_link && (
-                    <a
-                      href={song.youtube_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-violet-500 hover:text-violet-700 transition-colors no-print"
-                      title="Play on YouTube"
-                    >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M21.543 6.498C22 8.28 22 12 22 12s0 3.72-.457 5.502c-.254.985-.997 1.76-1.938 2.022C17.896 20 12 20 12 20s-5.893 0-7.605-.476c-.945-.266-1.687-1.04-1.938-2.022C2 15.72 2 12 2 12s0-3.72.457-5.502c.254-.985.997-1.76 1.938-2.022C6.107 4 12 4 12 4s5.896 0 7.605.476c.945.266 1.687 1.04 1.938 2.022zM10 15.5l6-3.5-6-3.5v7z" />
-                      </svg>
-                    </a>
-                  )}
+                  {song.youtube_link && <ExternalMediaLink href={song.youtube_link} className="no-print min-h-8" />}
                 </div>
               </div>
             ))}

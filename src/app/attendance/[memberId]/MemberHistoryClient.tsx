@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import type { ChoirMember, AttendanceRecord } from '@/types';
+import Icon from '@/components/Icon';
 
 interface Props {
   member: ChoirMember;
@@ -99,7 +100,7 @@ export default function MemberHistoryClient({ member, history }: Props) {
       {/* History */}
       {totalSessions === 0 ? (
         <div className="text-center py-16">
-          <p className="text-3xl mb-3">📋</p>
+          <div className="mx-auto mb-3 flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400"><Icon name="history" /></div>
           <p className="text-slate-500 text-sm">No attendance records yet</p>
         </div>
       ) : (

@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { ChoirMember, AttendanceRecord } from '@/types';
+import PageHeader from '@/components/PageHeader';
+import Icon from '@/components/Icon';
 
 type MemberWithStatus = ChoirMember & { attendance: AttendanceRecord | null };
 
@@ -77,15 +79,14 @@ export default function ReportClient() {
         <span className="text-sm font-medium">Attendance</span>
       </button>
 
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-1">Attendance Report</h1>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{formattedDate}</p>
+      <PageHeader title="Attendance report" description={formattedDate} />
 
       {/* Date picker */}
       <input
         type="date"
         value={selectedDate}
         onChange={(e) => setSelectedDate(e.target.value)}
-        className="mb-4 w-full border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+        className="field-control mb-5 max-w-xs"
       />
 
       {error && (
@@ -101,7 +102,7 @@ export default function ReportClient() {
         </div>
       ) : members.length === 0 ? (
         <div className="text-center py-16">
-          <p className="text-3xl mb-3">🎤</p>
+          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400"><Icon name="people" /></div>
           <p className="text-slate-500 text-sm">No choir members found</p>
         </div>
       ) : (

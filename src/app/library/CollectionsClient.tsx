@@ -29,6 +29,8 @@ import {
 } from '@/lib/actions';
 import { MUSICAL_KEYS } from '@/lib/constants';
 import LyricsModal from '@/components/LyricsModal';
+import Icon from '@/components/Icon';
+import ExternalMediaLink from '@/components/ExternalMediaLink';
 
 export default function CollectionsClient({
   collections,
@@ -166,14 +168,7 @@ export default function CollectionsClient({
                       </span>
                     )}
                     {song.song_youtube_link && (
-                      <a
-                        href={song.song_youtube_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-violet-400 hover:text-violet-200 flex items-center gap-1.5 transition-colors"
-                      >
-                        ▶ YouTube
-                      </a>
+                      <ExternalMediaLink href={song.song_youtube_link} className="text-violet-300" />
                     )}
                     <button
                       onClick={() =>
@@ -257,7 +252,7 @@ export default function CollectionsClient({
                 className="bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-emerald-700 transition-colors"
                 title="Jam Mode — fullscreen song list"
               >
-                🎸 Jam
+                <Icon name="music" size={15} />Jam
               </button>
               <button
                 onClick={() => setEditingCollection(selected)}
@@ -286,7 +281,7 @@ export default function CollectionsClient({
 
         {/* Search */}
         <div className="relative mb-4">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
+          <Icon name="search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             placeholder="Search this collection…"
@@ -338,7 +333,7 @@ export default function CollectionsClient({
           </div>
         ) : (
           <div className="text-center py-12">
-            <p className="text-3xl mb-2">🎵</p>
+            <div className="mx-auto mb-3 flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400"><Icon name="music" /></div>
             <p className="text-slate-500 dark:text-slate-400 text-sm">
               {detailSearch ? 'No songs match your search' : 'No songs in this collection yet'}
             </p>
@@ -388,28 +383,28 @@ export default function CollectionsClient({
         </p>
         <button
           onClick={() => setShowCreate(true)}
-          className="bg-violet-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors"
+          className="button-primary"
         >
-          + New Collection
+          <Icon name="plus" size={16} />New collection
         </button>
       </div>
 
       {/* Search */}
       <div className="relative mb-4">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
+          <Icon name="search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
         <input
           type="text"
           placeholder="Search collections or songs within them…"
           value={listSearch}
           onChange={(e) => setListSearch(e.target.value)}
-          className="w-full pl-9 pr-9 py-2.5 border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+          className="field-control pl-9 pr-9"
         />
         {listSearch && (
           <button
             onClick={() => setListSearch('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
+            className="icon-button absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
           >
-            ✕
+            <Icon name="close" size={15} />
           </button>
         )}
       </div>
@@ -427,7 +422,7 @@ export default function CollectionsClient({
       {/* Collections list */}
       {filteredCollections.length === 0 ? (
         <div className="text-center py-16">
-          <p className="text-4xl mb-3">🗂️</p>
+          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400"><Icon name="library" /></div>
           <p className="text-slate-500 dark:text-slate-400 font-medium">
             {collections.length === 0
               ? 'No collections yet'
@@ -436,19 +431,19 @@ export default function CollectionsClient({
           {collections.length === 0 && (
             <button
               onClick={() => setShowCreate(true)}
-              className="mt-4 bg-violet-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors"
+              className="button-primary mt-4"
             >
               Create your first collection
             </button>
           )}
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-0 border-t border-slate-200 dark:border-slate-800">
           {filteredCollections.map((collection) => (
             <button
               key={collection.id}
               onClick={() => setSelectedId(collection.id)}
-              className="w-full text-left bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-4 hover:border-violet-300 dark:hover:border-violet-600 hover:shadow-sm transition-all"
+              className="w-full border-b border-slate-200 px-3 py-4 text-left transition-colors hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-900/60 sm:px-4"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
@@ -461,16 +456,16 @@ export default function CollectionsClient({
                     </p>
                   )}
                 </div>
-                <span className="shrink-0 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 text-xs font-semibold px-2.5 py-1 rounded-lg">
-                  {collection.collection_songs.length}
+                <span className="shrink-0 text-xs tabular-nums text-slate-500 dark:text-slate-400">
+                  {collection.collection_songs.length} songs
                 </span>
               </div>
               {collection.collection_songs.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
                   {collection.collection_songs.slice(0, 4).map((s) => (
                     <span
                       key={s.id}
-                      className="text-[11px] text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-700/60 px-2 py-0.5 rounded-full"
+                      className="text-xs text-slate-500 dark:text-slate-400"
                     >
                       {s.song_title}
                     </span>
@@ -523,7 +518,7 @@ function SortableCollectionSongRow({
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 flex items-start gap-3"
+      className="border-b border-slate-200 px-2 py-3 flex items-start gap-3 dark:border-slate-800"
     >
       <button
         type="button"
@@ -550,19 +545,12 @@ function SortableCollectionSongRow({
         </p>
         <div className="flex flex-wrap items-center gap-2 mt-1">
           {song.song_key && (
-            <span className="bg-violet-600 text-white text-xs font-bold px-2 py-0.5 rounded-lg">
+            <span className="font-semibold tabular-nums text-violet-900 dark:text-violet-200">
               {song.song_key}
             </span>
           )}
           {song.song_youtube_link && (
-            <a
-              href={song.song_youtube_link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-violet-600 dark:text-violet-400 hover:underline flex items-center gap-1"
-            >
-              ▶ YouTube
-            </a>
+            <ExternalMediaLink href={song.song_youtube_link} className="min-h-7" />
           )}
           <button
             onClick={onOpenLyrics}

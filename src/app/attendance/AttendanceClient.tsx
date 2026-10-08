@@ -1,109 +1,72 @@
-"use client";
+'use client';
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import type { MemberWithAttendance } from "@/types";
-import {
-  upsertAttendance,
-  addChoirMember,
-  deleteChoirMember,
-  markAllAbsent,
-} from "@/lib/actions";
-import { ABSENCE_REASONS, MEMBER_ROLES } from "@/lib/constants";
-import EditBirthdaysModal from "@/components/EditBirthdaysModal";
+import { useMemo, useState, useTransition, type FormEvent, type ChangeEvent } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import type { MemberWithAttendance } from '@/types';
+import { upsertAttendance, addChoirMember, deleteChoirMember, markAllAbsent } from '@/lib/actions';
+import { ABSENCE_REASONS, MEMBER_ROLES } from '@/lib/constants';
+import EditBirthdaysModal from '@/components/EditBirthdaysModal';
+import PageHeader from '@/components/PageHeader';
+import Icon from '@/components/Icon';
 
 interface Props {
   members: MemberWithAttendance[];
   sessionDate: string;
 }
 
-const AVATAR_COLORS = [
-  "bg-violet-500",
-  "bg-blue-500",
-  "bg-green-500",
-  "bg-amber-500",
-  "bg-pink-500",
-  "bg-indigo-500",
-  "bg-teal-500",
-  "bg-orange-500",
-];
-
 function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+  return name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase();
 }
 
-function getAvatarColor(name: string) {
-  const hash = name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+function isBirthdayToday(birthDate: string | null | undefined) {
+  if (!birthDate) return false;
+  const birth = new Date(birthDate);
+  const today = new Date();
+  return birth.getMonth() === today.getMonth() && birth.getDate() === today.getDate();
 }
 
 export default function AttendanceClient({ members, sessionDate }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-
-  // Birthday editing
   const [showEditBirthdaysModal, setShowEditBirthdaysModal] = useState(false);
-
-  // Member management
   const [showAddMember, setShowAddMember] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newRole, setNewRole] = useState("");
-  const [newImageUrl, setNewImageUrl] = useState("");
-  const [newBirthDate, setNewBirthDate] = useState("");
+  const [newName, setNewName] = useState('');
+  const [newRole, setNewRole] = useState('');
+  const [newImageUrl, setNewImageUrl] = useState('');
+  const [newBirthDate, setNewBirthDate] = useState('');
   const [addError, setAddError] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-
-  // Absence flow
   const [markingAbsentId, setMarkingAbsentId] = useState<string | null>(null);
-  const [selectedReason, setSelectedReason] = useState("");
-  const [reasonText, setReasonText] = useState("");
+  const [selectedReason, setSelectedReason] = useState('');
+  const [reasonText, setReasonText] = useState('');
+  const [search, setSearch] = useState('');
 
-  const formattedDate = new Date(sessionDate + "T00:00:00").toLocaleDateString(
-    "en-US",
-    {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    },
-  );
-
-  const presentCount = members.filter(
-    (m) => m.attendance?.present === true,
-  ).length;
-  const absentCount = members.filter(
-    (m) => m.attendance?.present === false,
-  ).length;
+  const formattedDate = new Date(`${sessionDate}T00:00:00`).toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+  });
+  const presentCount = members.filter((member) => member.attendance?.present === true).length;
+  const absentCount = members.filter((member) => member.attendance?.present === false).length;
   const unmarkedCount = members.length - presentCount - absentCount;
+  const filteredMembers = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return query ? members.filter((member) => member.name.toLowerCase().includes(query) || member.role?.toLowerCase().includes(query)) : members;
+  }, [members, search]);
 
-  // Get birthdays for this month
-  const today = new Date();
   const upcomingBirthdays = members
-    .filter((m) => m.birth_date && !isBirthdayToday(m.birth_date))
-    .filter((m) => {
-      const birth = new Date(m.birth_date!);
-      return (
-        birth.getMonth() === today.getMonth() &&
-        birth.getDate() > today.getDate()
-      );
+    .filter((member) => member.birth_date && !isBirthdayToday(member.birth_date))
+    .filter((member) => {
+      const birthDate = new Date(member.birth_date!);
+      const today = new Date();
+      return birthDate.getMonth() === today.getMonth() && birthDate.getDate() > today.getDate();
     })
-    .sort((a, b) => {
-      const aDate = new Date(a.birth_date!);
-      const bDate = new Date(b.birth_date!);
-      return aDate.getDate() - bDate.getDate();
-    });
+    .sort((a, b) => new Date(a.birth_date!).getDate() - new Date(b.birth_date!).getDate());
 
   function handleMarkPresent(memberId: string) {
     if (markingAbsentId === memberId) {
       setMarkingAbsentId(null);
-      setSelectedReason("");
-      setReasonText("");
+      setSelectedReason('');
+      setReasonText('');
     }
     startTransition(async () => {
       await upsertAttendance(memberId, sessionDate, true, null, null);
@@ -116,57 +79,43 @@ export default function AttendanceClient({ members, sessionDate }: Props) {
     const knownReasons = ABSENCE_REASONS as readonly string[];
     if (existingReason && knownReasons.includes(existingReason)) {
       setSelectedReason(existingReason);
-      setReasonText("");
+      setReasonText('');
     } else if (existingReason) {
-      setSelectedReason("Other");
+      setSelectedReason('Other');
       setReasonText(existingReason);
     } else {
-      setSelectedReason("");
-      setReasonText("");
+      setSelectedReason('');
+      setReasonText('');
     }
   }
 
   function handleConfirmAbsent(memberId: string) {
-    const reason =
-      selectedReason === "Other"
-        ? reasonText.trim() || "Other"
-        : selectedReason;
+    const reason = selectedReason === 'Other' ? reasonText.trim() || 'Other' : selectedReason;
     startTransition(async () => {
-      await upsertAttendance(
-        memberId,
-        sessionDate,
-        false,
-        reason || null,
-        null,
-      );
+      await upsertAttendance(memberId, sessionDate, false, reason || null, null);
       setMarkingAbsentId(null);
-      setSelectedReason("");
-      setReasonText("");
+      setSelectedReason('');
+      setReasonText('');
       router.refresh();
     });
   }
 
-  async function handleAddMember(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleAddMember(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     setAddError(null);
     const formData = new FormData();
-    formData.set("name", newName);
-    formData.set("role", newRole);
-    formData.set("image_url", newImageUrl);
-    formData.set("birth_date", newBirthDate);
+    formData.set('name', newName);
+    formData.set('role', newRole);
+    formData.set('image_url', newImageUrl);
+    formData.set('birth_date', newBirthDate);
     startTransition(async () => {
       try {
         await addChoirMember(formData);
-        setNewName("");
-        setNewRole("");
-        setNewImageUrl("");
-        setNewBirthDate("");
+        setNewName(''); setNewRole(''); setNewImageUrl(''); setNewBirthDate('');
         setShowAddMember(false);
         router.refresh();
-      } catch (err) {
-        setAddError(
-          err instanceof Error ? err.message : "Failed to add member",
-        );
+      } catch (error) {
+        setAddError(error instanceof Error ? error.message : 'Failed to add member');
       }
     });
   }
@@ -180,607 +129,140 @@ export default function AttendanceClient({ members, sessionDate }: Props) {
   }
 
   function handleMarkAllAbsent() {
-    if (
-      !confirm(`Mark all ${members.length} members as absent for this session?`)
-    )
-      return;
+    if (!confirm(`Mark all ${members.length} members as absent for this session?`)) return;
     startTransition(async () => {
-      await markAllAbsent(
-        members.map((m) => m.id),
-        sessionDate,
-      );
+      await markAllAbsent(members.map((member) => member.id), sessionDate);
       router.refresh();
     });
   }
 
-  function handleDateChange(e: React.ChangeEvent<HTMLInputElement>) {
-    router.push(`/attendance?date=${e.target.value}`);
+  function handleDateChange(event: ChangeEvent<HTMLInputElement>) {
+    router.push(`/attendance?date=${event.target.value}`);
   }
 
   return (
     <div>
-      {/* Header */}
-      <div className="mb-3">
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-              Attendance
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              {formattedDate}
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <Link
-            href="/attendance/report"
-            className="border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 px-3 py-2 rounded-xl text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-          >
-            📊 Report
-          </Link>
-          <Link
-            href="/wheel"
-            className="border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 px-3 py-2 rounded-xl text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-          >
-            🎯 Spin Wheel
-          </Link>
-          <button
-            onClick={() => setShowEditBirthdaysModal(true)}
-            className="border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 px-3 py-2 rounded-xl text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-          >
-            🎂 Birthdays
-          </button>
-          <button
-            onClick={() => setShowAddMember((v) => !v)}
-            className="bg-violet-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors shadow-sm"
-          >
-            + Member
-          </button>
-        </div>
-      </div>
-
-      {/* Date picker */}
-      <input
-        type="date"
-        value={sessionDate}
-        onChange={handleDateChange}
-        className="mb-3 w-full border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+      <PageHeader
+        title="Attendance"
+        description={<>{formattedDate}<span className="mx-2 text-slate-300 dark:text-slate-700">·</span>{members.length} choir members</>}
+        actions={<>
+          <Link href="/attendance/report" className="button-secondary"><Icon name="report" size={16} />Report</Link>
+          <Link href="/wheel" className="button-secondary"><Icon name="shuffle" size={16} />Spin wheel</Link>
+          <button onClick={() => setShowEditBirthdaysModal(true)} className="button-secondary"><Icon name="birthday" size={16} />Birthdays</button>
+          <button onClick={() => setShowAddMember((value) => !value)} className="button-primary"><Icon name="plus" size={16} />Add member</button>
+        </>}
       />
 
-      {/* Upcoming birthdays reminder */}
+      <div className="mb-5 flex flex-col gap-4 border-b border-slate-200 pb-5 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="w-full sm:w-48">
+            <span className="sr-only">Attendance date</span>
+            <input type="date" value={sessionDate} onChange={handleDateChange} className="field-control" />
+          </label>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+            <span className="inline-flex items-center gap-1.5 text-slate-700 dark:text-slate-200"><span className="h-2 w-2 rounded-full bg-emerald-600" />{presentCount} present</span>
+            <span className="inline-flex items-center gap-1.5 text-slate-700 dark:text-slate-200"><span className="h-2 w-2 rounded-full bg-rose-600" />{absentCount} absent</span>
+            <span className="inline-flex items-center gap-1.5 text-slate-500 dark:text-slate-400"><span className="h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-600" />{unmarkedCount} unmarked</span>
+          </div>
+        </div>
+        {members.length > 0 && <button onClick={handleMarkAllAbsent} disabled={isPending} className="button-quiet self-start text-xs text-red-700 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/40 sm:self-auto">Mark all absent</button>}
+      </div>
+
       {upcomingBirthdays.length > 0 && (
-        <div className="mb-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-3.5">
-          <p className="text-xs font-semibold text-blue-900 dark:text-blue-200 mb-2">
-            📅{" "}Upcoming Birthdays This Month
-          </p>
-          <div className="space-y-1.5">
-            {upcomingBirthdays.slice(0, 5).map((m) => {
-              const birth = new Date(m.birth_date!);
-              return (
-                <p
-                  key={m.id}
-                  className="text-xs text-blue-800 dark:text-blue-300"
-                >
-                  <span className="font-medium">{m.name}</span> —{" "}
-                  {birth.toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </p>
-              );
-            })}
-            {upcomingBirthdays.length > 5 && (
-              <p className="text-xs text-blue-700 dark:text-blue-400 font-medium">
-                +{upcomingBirthdays.length - 5} more
-              </p>
-            )}
-          </div>
+        <div className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-1 border-l-2 border-violet-700 bg-violet-50/60 px-4 py-3 text-sm dark:border-violet-300 dark:bg-violet-300/5">
+          <span className="inline-flex items-center gap-2 font-medium text-slate-800 dark:text-slate-100"><Icon name="birthday" size={16} className="text-violet-800 dark:text-violet-300" />Upcoming birthdays</span>
+          <span className="text-slate-500 dark:text-slate-400">{upcomingBirthdays.slice(0, 5).map((member) => `${member.name} · ${new Date(member.birth_date!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`).join('  /  ')}{upcomingBirthdays.length > 5 ? `  /  +${upcomingBirthdays.length - 5} more` : ''}</span>
         </div>
       )}
 
-      {/* Stats bar */}
-      {members.length > 0 && (
-        <div className="flex gap-2 mb-4">
-          <div className="flex-1 bg-green-50 dark:bg-green-900/30 rounded-xl px-3 py-2 text-center border border-green-100 dark:border-green-800">
-            <p className="text-xl font-bold text-green-700 dark:text-green-400">
-              {presentCount}
-            </p>
-            <p className="text-xs text-green-600 dark:text-green-500">
-              Present
-            </p>
-          </div>
-          <div className="flex-1 bg-red-50 dark:bg-red-900/30 rounded-xl px-3 py-2 text-center border border-red-100 dark:border-red-800">
-            <p className="text-xl font-bold text-red-600 dark:text-red-400">
-              {absentCount}
-            </p>
-            <p className="text-xs text-red-500 dark:text-red-400">Absent</p>
-          </div>
-          <div className="flex-1 bg-slate-50 dark:bg-slate-800 rounded-xl px-3 py-2 text-center border border-slate-200 dark:border-slate-700">
-            <p className="text-xl font-bold text-slate-500 dark:text-slate-400">
-              {unmarkedCount}
-            </p>
-            <p className="text-xs text-slate-400 dark:text-slate-500">
-              Unmarked
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Mark all absent */}
-      {members.length > 0 && (
-        <button
-          onClick={handleMarkAllAbsent}
-          disabled={isPending}
-          className="w-full mb-4 border border-red-200 dark:border-red-800 text-red-500 dark:text-red-400 rounded-xl py-2.5 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 transition-colors"
-        >
-          ✗ Mark all absent
-        </button>
-      )}
-
-      {/* Add member form */}
       {showAddMember && (
-        <form
-          onSubmit={handleAddMember}
-          className="bg-violet-50 dark:bg-violet-900/30 border border-violet-200 dark:border-violet-700 rounded-2xl p-4 mb-4 space-y-3"
-        >
-          <p className="text-sm font-semibold text-violet-800 dark:text-violet-300">
-            New Choir / Band Member
-          </p>
-          {addError && (
-            <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              {addError}
-            </p>
-          )}
-          <input
-            type="text"
-            placeholder="Full name *"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            required
-            className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-          />
-          <select
-            value={newRole}
-            onChange={(e) => setNewRole(e.target.value)}
-            className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-          >
-            <option value="">Role / Instrument (optional)</option>
-            {MEMBER_ROLES.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
-          <input
-            type="url"
-            placeholder="Photo URL (optional)"
-            value={newImageUrl}
-            onChange={(e) => setNewImageUrl(e.target.value)}
-            className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-          />
-          <div>
-            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
-              Date of Birth{" "}
-              <span className="text-slate-400 font-normal">(optional)</span>
-            </label>
-            <input
-              type="date"
-              value={newBirthDate}
-              onChange={(e) => setNewBirthDate(e.target.value)}
-              className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-            />
+        <form onSubmit={handleAddMember} className="mb-6 max-w-3xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <div><h2 className="font-semibold text-slate-900 dark:text-slate-100">Add choir or band member</h2><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Member details are optional except for the name.</p></div>
+            <button type="button" onClick={() => setShowAddMember(false)} className="icon-button" aria-label="Close form"><Icon name="close" /></button>
           </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setShowAddMember(false)}
-              className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl py-2.5 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isPending}
-              className="flex-1 bg-violet-600 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-violet-700 disabled:opacity-60"
-            >
-              {isPending ? "Adding…" : "Add Member"}
-            </button>
+          {addError && <p role="alert" className="mb-4 border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">{addError}</p>}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <input aria-label="Full name" type="text" placeholder="Full name *" value={newName} onChange={(event) => setNewName(event.target.value)} required className="field-control" />
+            <select aria-label="Role or instrument" value={newRole} onChange={(event) => setNewRole(event.target.value)} className="field-control"><option value="">Role / instrument (optional)</option>{MEMBER_ROLES.map((role) => <option key={role} value={role}>{role}</option>)}</select>
+            <input aria-label="Photo URL" type="url" placeholder="Photo URL (optional)" value={newImageUrl} onChange={(event) => setNewImageUrl(event.target.value)} className="field-control" />
+            <label className="text-xs text-slate-500 dark:text-slate-400">Date of birth (optional)<input type="date" value={newBirthDate} onChange={(event) => setNewBirthDate(event.target.value)} className="field-control mt-1" /></label>
           </div>
+          <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => setShowAddMember(false)} className="button-secondary">Cancel</button><button type="submit" disabled={isPending} className="button-primary">{isPending ? 'Adding…' : 'Add member'}</button></div>
         </form>
       )}
 
-      {/* Empty state */}
-      {members.length === 0 && !showAddMember && (
-        <div className="text-center py-20">
-          <p className="text-5xl mb-4">🎤</p>
-          <p className="text-slate-500 dark:text-slate-400 font-medium text-lg">
-            No choir members yet
-          </p>
-          <button
-            onClick={() => setShowAddMember(true)}
-            className="mt-4 bg-violet-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors"
-          >
-            Add First Member
-          </button>
+      {members.length === 0 && !showAddMember ? (
+        <div className="border-y border-slate-200 py-16 text-center dark:border-slate-800">
+          <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400"><Icon name="people" /></div>
+          <h2 className="font-medium text-slate-800 dark:text-slate-100">No choir members yet</h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Add your roster to start recording rehearsal attendance.</p>
+          <button onClick={() => setShowAddMember(true)} className="button-primary mt-5"><Icon name="plus" size={16} />Add first member</button>
         </div>
-      )}
+      ) : members.length > 0 ? (
+        <section aria-label="Choir member attendance">
+          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Choir roster <span className="ml-1 font-normal tabular-nums text-slate-400">{filteredMembers.length}{search ? ` of ${members.length}` : ''}</span></h2>
+            <label className="relative block w-full sm:max-w-xs">
+              <span className="sr-only">Search members</span>
+              <Icon name="search" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Find a member…" className="field-control pl-9" />
+            </label>
+          </div>
 
-      {/* Member cards — horizontal swipe carousel */}
-      {members.length > 0 && (
-        <div
-          className="flex gap-3 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-3"
-          style={
-            {
-              scrollbarWidth: "none",
-              WebkitOverflowScrolling: "touch",
-            } as React.CSSProperties
-          }
-        >
-          {members.map((member, index) => {
-            const present = member.attendance?.present;
-            const absReason = (member.attendance as any)?.absence_reason as
-              | string
-              | null
-              | undefined;
-            const isMarkingAbsent = markingAbsentId === member.id;
-            const isConfirmingDelete = confirmDeleteId === member.id;
-            const avatarColor = getAvatarColor(member.name);
-
-            let topBg = "bg-slate-50 dark:bg-slate-700";
-            let borderColor = "border-slate-200 dark:border-slate-600";
-            if (present === true) {
-              topBg = "bg-green-50 dark:bg-green-900/30";
-              borderColor = "border-green-200 dark:border-green-700";
-            }
-            if (present === false) {
-              topBg = "bg-red-50 dark:bg-red-900/30";
-              borderColor = "border-red-200 dark:border-red-700";
-            }
-
-            // Show birthday card if it's their birthday
-            if (isBirthdayToday(member.birth_date)) {
-              return (
-                <BirthdayCard
-                  key={member.id}
-                  member={member}
-                  onMarkPresent={handleMarkPresent}
-                  onStartMarkAbsent={startMarkingAbsent}
-                  isPending={isPending}
-                />
-              );
-            }
-
-            return (
-              <div
-                key={member.id}
-                className={`shrink-0 snap-center w-[78vw] max-w-75 bg-white dark:bg-slate-800 rounded-2xl border shadow-md overflow-hidden flex flex-col transition-opacity ${isPending ? "opacity-60 pointer-events-none" : ""} ${borderColor}`}
-              >
-                {/* Card top — avatar + info */}
-                <div
-                  className={`${topBg} px-4 pt-4 pb-5 flex flex-col items-center`}
-                >
-                  {/* Counter + delete row */}
-                  <div className="w-full flex items-center justify-between mb-3">
-                    <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">
-                      {index + 1} / {members.length}
-                    </span>
-                    {isConfirmingDelete ? (
-                      <div className="flex gap-3">
-                        <button
-                          onClick={() => setConfirmDeleteId(null)}
-                          className="text-xs text-slate-500"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={() => handleDelete(member.id)}
-                          className="text-xs text-red-600 font-semibold"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setConfirmDeleteId(member.id)}
-                        className="text-slate-300 hover:text-red-400 transition-colors p-1"
-                        title="Remove member"
-                      >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Avatar */}
-                  <Link href={`/attendance/${member.id}`}>
-                    <div className="w-24 h-24 rounded-full overflow-hidden shadow-md">
-                      {member.image_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={member.image_url}
-                          alt={member.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div
-                          className={`w-full h-full ${avatarColor} flex items-center justify-center`}
-                        >
-                          <span className="text-white font-bold text-3xl">
-                            {getInitials(member.name)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </Link>
-
-                  <Link
-                    href={`/attendance/${member.id}`}
-                    className="mt-3 text-center"
-                  >
-                    <p className="font-bold text-slate-900 dark:text-slate-100 text-base leading-tight">
-                      {member.name}
-                    </p>
-                  </Link>
-                  {member.role && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                      {member.role}
-                    </p>
-                  )}
-
-                  {/* Status badge */}
-                  <div className="mt-2.5">
-                    {present === true && (
-                      <span className="inline-flex items-center gap-1 text-sm font-semibold text-green-700 bg-green-200 px-3 py-1 rounded-full">
-                        ✓ Present
-                      </span>
-                    )}
-                    {present === false && (
-                      <span className="inline-flex items-center gap-1 text-sm font-semibold text-red-600 bg-red-200 px-3 py-1 rounded-full">
-                        ✗ Absent{absReason ? ` · ${absReason}` : ""}
-                      </span>
-                    )}
-                    {(present === null || present === undefined) && (
-                      <span className="text-sm text-slate-400">Not marked</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Card bottom — action buttons */}
-                <div className="px-4 py-4 flex-1 space-y-3">
-                  {!isMarkingAbsent ? (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleMarkPresent(member.id)}
-                        className={`flex-1 py-3.5 rounded-xl text-sm font-bold border-2 transition-colors ${
-                          present === true
-                            ? "bg-green-600 text-white border-green-600"
-                            : "bg-white dark:bg-slate-700 text-green-700 dark:text-green-400 border-green-300 dark:border-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
-                        }`}
-                      >
-                        ✓ Present
-                      </button>
-                      <button
-                        onClick={() =>
-                          startMarkingAbsent(member.id, absReason ?? null)
-                        }
-                        className={`flex-1 py-3.5 rounded-xl text-sm font-bold border-2 transition-colors ${
-                          present === false
-                            ? "bg-red-600 text-white border-red-600"
-                            : "bg-white dark:bg-slate-700 text-red-600 dark:text-red-400 border-red-300 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                        }`}
-                      >
-                        ✗ Absent
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-2.5">
-                      <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-                        Reason for absence:
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {ABSENCE_REASONS.map((reason) => (
-                          <button
-                            key={reason}
-                            type="button"
-                            onClick={() => setSelectedReason(reason)}
-                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                              selectedReason === reason
-                                ? "bg-red-600 text-white border-red-600"
-                                : "bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:border-red-300"
-                            }`}
-                          >
-                            {reason}
-                          </button>
-                        ))}
-                      </div>
-                      {selectedReason === "Other" && (
-                        <input
-                          type="text"
-                          placeholder="Describe reason…"
-                          value={reasonText}
-                          onChange={(e) => setReasonText(e.target.value)}
-                          className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300"
-                        />
-                      )}
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => {
-                            setMarkingAbsentId(null);
-                            setSelectedReason("");
-                            setReasonText("");
-                          }}
-                          className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-xl py-2.5 text-sm font-medium dark:hover:bg-slate-700"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={() => handleConfirmAbsent(member.id)}
-                          disabled={isPending}
-                          className="flex-1 bg-red-600 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-red-700 disabled:opacity-60"
-                        >
-                          {isPending ? "Saving…" : "Confirm"}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      <EditBirthdaysModal
-        members={members}
-        isOpen={showEditBirthdaysModal}
-        onClose={() => setShowEditBirthdaysModal(false)}
-      />
-    </div>
-  );
-}
-
-// ─── Helper Functions ────────────────────────────────────────────────────────
-
-function isBirthdayToday(birthDate: string | null | undefined): boolean {
-  if (!birthDate) return false;
-  const today = new Date();
-  const birth = new Date(birthDate);
-  return (
-    today.getMonth() === birth.getMonth() && today.getDate() === birth.getDate()
-  );
-}
-
-function getAge(birthDate: string | null | undefined): number | null {
-  if (!birthDate) return null;
-  const today = new Date();
-  const birth = new Date(birthDate);
-  let age = today.getFullYear() - birth.getFullYear();
-  const monthDiff = today.getMonth() - birth.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-    age--;
-  }
-  return age;
-}
-
-// ─── Birthday Card Component ──────────────────────────────────────────────────
-
-function BirthdayCard({
-  member,
-  onMarkPresent,
-  onStartMarkAbsent,
-  isPending,
-}: {
-  member: MemberWithAttendance;
-  onMarkPresent: (id: string) => void;
-  onStartMarkAbsent: (id: string, reason: string | null) => void;
-  isPending: boolean;
-}) {
-  const avatarColor = getAvatarColor(member.name);
-  const age = getAge(member.birth_date);
-
-  return (
-    <div className="shrink-0 snap-center w-[78vw] max-w-75 bg-linear-to-br from-pink-100 via-violet-100 to-blue-100 dark:from-pink-900/40 dark:via-violet-900/40 dark:to-blue-900/40 rounded-2xl border-2 border-pink-300 dark:border-pink-700 shadow-lg overflow-hidden flex flex-col relative">
-
-
-      {/* Card content */}
-      <div className="px-4 pt-4 pb-5 flex flex-col items-center relative z-10 h-58.5">
-
-
-        {/* Avatar */}
-        <div className="relative">
-        <div className="w-24 h-24 rounded-full overflow-hidden shadow-lg border-4 border-white dark:border-slate-700 mb-3">
-          {member.image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={member.image_url}
-              alt={member.name}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div
-              className={`w-full h-full ${avatarColor} flex items-center justify-center`}
-            >
-              <span className="text-white font-bold text-3xl">
-                {getInitials(member.name)}
-              </span>
+          <div className="overflow-hidden border-y border-slate-200 dark:border-slate-800">
+            <div className="hidden grid-cols-[minmax(0,1.6fr)_minmax(90px,.55fr)_minmax(230px,.9fr)_40px] items-center gap-4 border-b border-slate-200 bg-slate-100/70 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 sm:grid sm:px-5">
+              <span>Member</span><span>Status</span><span>Mark attendance</span><span />
             </div>
-          )}
-        </div>
- <span className="text-3xl absolute bottom-2 right-0">🎂</span>
-        </div>
+            {filteredMembers.map((member) => {
+              const present = member.attendance?.present;
+              const absenceReason = member.attendance?.absence_reason ?? null;
+              const isMarkingAbsent = markingAbsentId === member.id;
+              const isConfirmingDelete = confirmDeleteId === member.id;
+              const birthday = isBirthdayToday(member.birth_date);
+              return (
+                <div key={member.id} className="border-b border-slate-200 px-3 py-3 last:border-b-0 hover:bg-white dark:border-slate-800 dark:hover:bg-slate-900 sm:px-5">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1.6fr)_minmax(90px,.55fr)_minmax(230px,.9fr)_40px] sm:items-center sm:gap-4">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <Link href={`/attendance/${member.id}`} className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                        {member.image_url ? <img src={member.image_url} alt="" className="h-full w-full object-cover" /> : <span>{getInitials(member.name)}</span>}
+                      </Link>
+                      <div className="min-w-0">
+                        <Link href={`/attendance/${member.id}`} className="inline-flex max-w-full items-center gap-1.5 truncate text-sm font-medium text-slate-900 hover:text-violet-800 dark:text-slate-100 dark:hover:text-violet-300">
+                          <span className="truncate">{member.name}</span>{birthday && <Icon name="birthday" size={14} className="shrink-0 text-violet-700 dark:text-violet-300" />}
+                        </Link>
+                        <p className="truncate text-xs text-slate-500 dark:text-slate-400">{member.role || (birthday ? 'Birthday today' : 'Choir member')}</p>
+                      </div>
+                    </div>
 
-        {/* Birthday message */}
-        <p className="text-lg font-bold bg-linear-to-r from-pink-600 to-violet-600 bg-clip-text text-transparent text-center leading-tight">
-          Happy Birthday {" "}
-          <span className="text-slate-900 dark:text-slate-100 font-normal mt-1.5 text-center">
-            {member.name}
-          </span>
-          !
-        </p>
+                    <div className="pl-12 text-xs sm:pl-0">
+                      {present === true ? <span className="font-medium text-emerald-700 dark:text-emerald-300">Present</span> : present === false ? <span className="font-medium text-rose-700 dark:text-rose-300">Absent{absenceReason ? ` · ${absenceReason}` : ''}</span> : <span className="text-slate-400">Unmarked</span>}
+                    </div>
 
-        {/* Age and birth date */}
-        <div className="mt-2.5 text-center">
-          {/* {age !== null && (
-            <p className="text-2xl font-bold text-pink-600 dark:text-pink-400">
-              {age}
-            </p>
-          )} */}
-          <p className="text-xs text-slate-600 dark:text-slate-300 font-medium mt-0.5">
-            Born{" "}
-            {new Date(member.birth_date!).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
+                    <div className="flex min-w-0 flex-wrap items-center gap-1.5 pl-12 sm:pl-0">
+                      {!isMarkingAbsent ? <>
+                        <button onClick={() => handleMarkPresent(member.id)} disabled={isPending} className={`min-h-8 rounded-md border px-3 text-xs font-medium transition-colors disabled:opacity-50 ${present === true ? 'border-emerald-700 bg-emerald-700 text-white' : 'border-slate-300 text-slate-600 hover:border-emerald-600 hover:text-emerald-800 dark:border-slate-700 dark:text-slate-300 dark:hover:text-emerald-300'}`}>Present</button>
+                        <button onClick={() => startMarkingAbsent(member.id, absenceReason)} disabled={isPending} className={`min-h-8 rounded-md border px-3 text-xs font-medium transition-colors disabled:opacity-50 ${present === false ? 'border-rose-700 bg-rose-700 text-white' : 'border-slate-300 text-slate-600 hover:border-rose-600 hover:text-rose-800 dark:border-slate-700 dark:text-slate-300 dark:hover:text-rose-300'}`}>Absent</button>
+                      </> : <div className="flex w-full flex-col gap-2">
+                        <div className="flex flex-wrap gap-1.5">{ABSENCE_REASONS.map((reason) => <button key={reason} type="button" onClick={() => setSelectedReason(reason)} className={`min-h-8 rounded-md border px-2.5 text-xs transition-colors ${selectedReason === reason ? 'border-rose-700 bg-rose-700 text-white' : 'border-slate-300 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'}`}>{reason}</button>)}</div>
+                        {selectedReason === 'Other' && <input type="text" placeholder="Describe reason…" value={reasonText} onChange={(event) => setReasonText(event.target.value)} className="field-control" />}
+                        <div className="flex gap-2"><button onClick={() => { setMarkingAbsentId(null); setSelectedReason(''); setReasonText(''); }} className="button-secondary min-h-8 px-3 text-xs">Cancel</button><button onClick={() => handleConfirmAbsent(member.id)} disabled={isPending} className="button-primary min-h-8 px-3 text-xs">{isPending ? 'Saving…' : 'Save absence'}</button></div>
+                      </div>}
+                    </div>
+
+                    <div className="flex justify-end pl-12 sm:pl-0">
+                      {isConfirmingDelete ? <div className="flex items-center gap-2 text-xs"><button onClick={() => setConfirmDeleteId(null)} className="text-slate-500">Cancel</button><button onClick={() => handleDelete(member.id)} disabled={isPending} className="font-medium text-rose-700 dark:text-rose-300">Remove</button></div> : <button onClick={() => setConfirmDeleteId(member.id)} className="icon-button h-8 w-8" title="Remove member" aria-label={`Remove ${member.name}`}><Icon name="trash" size={15} /></button>}
+                    </div>
+                  </div>
+                </div>
+              );
             })}
-          </p>
-        </div>
+            {filteredMembers.length === 0 && <p className="px-5 py-10 text-center text-sm text-slate-500">No members match “{search}”.</p>}
+          </div>
+        </section>
+      ) : null}
 
-        {/* Celebration message */}
-        {/* <p className="text-sm text-slate-700 dark:text-slate-300 mt-2.5 text-center font-medium">
-          Wishing you a joyful celebration! 🎵
-        </p> */}
-      </div>
-
-      {/* Card bottom — action buttons */}
-      <div className="px-4 py-4 flex-1 space-y-3 relative z-10">
-        <div className="flex gap-2">
-          <button
-            onClick={() => onMarkPresent(member.id)}
-            className={`flex-1 py-3.5 rounded-xl text-sm font-bold border-2 transition-colors ${
-              member.attendance?.present === true
-                ? "bg-green-600 text-white border-green-600"
-                : "bg-white dark:bg-slate-700 text-green-700 dark:text-green-400 border-green-300 dark:border-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
-            }`}
-          >
-            ✓ Present
-          </button>
-          <button
-            onClick={() =>
-              onStartMarkAbsent(
-                member.id,
-                member.attendance?.absence_reason ?? null,
-              )
-            }
-            className={`flex-1 py-3.5 rounded-xl text-sm font-bold border-2 transition-colors ${
-              member.attendance?.present === false
-                ? "bg-red-600 text-white border-red-600"
-                : "bg-white dark:bg-slate-700 text-red-600 dark:text-red-400 border-red-300 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-            }`}
-          >
-            ✗ Absent
-          </button>
-        </div>
-      </div>
+      <EditBirthdaysModal members={members} isOpen={showEditBirthdaysModal} onClose={() => setShowEditBirthdaysModal(false)} />
     </div>
   );
 }

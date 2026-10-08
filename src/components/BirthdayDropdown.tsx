@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import type { ChoirMember } from '@/types';
+import Icon from '@/components/Icon';
 
 interface Props {
   todayBirthdays: Pick<ChoirMember, 'id' | 'name' | 'birth_date'>[];
@@ -38,30 +39,29 @@ export default function BirthdayDropdown({ todayBirthdays }: Props) {
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label="Birthday notifications"
-        className="relative flex items-center justify-center w-9 h-9 rounded-full hover:bg-pink-50 dark:hover:bg-pink-900/20 transition-colors"
+        className="icon-button relative"
       >
-        {/* Pulsating ring */}
-        <span className="absolute inset-0 rounded-full animate-ping bg-pink-400 opacity-30" />
-        <span className="relative text-xl">🎂</span>
+        <Icon name="birthday" size={18} />
+        <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-violet-700 dark:bg-violet-300" />
       </button>
 
       {open && (
-        <div className="absolute right-0 top-11 w-64 bg-white dark:bg-slate-800 border border-pink-200 dark:border-pink-700 rounded-2xl shadow-xl overflow-hidden z-50">
-          <div className="bg-linear-to-r from-pink-500 to-violet-500 px-4 py-3">
-            <p className="text-white font-bold text-sm">🎉 Birthdays Today!</p>
+        <div className="absolute right-0 top-11 z-50 w-72 overflow-hidden border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
+          <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Birthdays today</p>
           </div>
-          <ul className="divide-y divide-slate-100 dark:divide-slate-700">
+          <ul className="divide-y divide-slate-100 dark:divide-slate-800">
             {todayBirthdays.map((m) => {
               const age = m.birth_date ? getAge(m.birth_date) : null;
               return (
                 <li key={m.id} className="px-4 py-3 flex items-center gap-3">
-                  <span className="text-2xl">🎈</span>
+                  <Icon name="birthday" size={17} className="text-violet-700 dark:text-violet-300" />
                   <div>
                     <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                       {m.name}
                     </p>
                     {age !== null && (
-                      <p className="text-xs text-pink-500 dark:text-pink-400 font-medium">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
                         Turning {age} today!
                       </p>
                     )}
@@ -70,11 +70,6 @@ export default function BirthdayDropdown({ todayBirthdays }: Props) {
               );
             })}
           </ul>
-          <div className="px-4 py-2 bg-pink-50 dark:bg-pink-900/20">
-            <p className="text-xs text-center text-pink-600 dark:text-pink-400 font-medium">
-              🎵 Wishing them a joyful day!
-            </p>
-          </div>
         </div>
       )}
     </div>

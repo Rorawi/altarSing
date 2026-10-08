@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
-import { SONG_CATEGORIES, MUSICAL_KEYS, TEMPOS, CATEGORY_COLORS } from '@/lib/constants';
+import { SONG_CATEGORIES, MUSICAL_KEYS, TEMPOS } from '@/lib/constants';
 import type { Song } from '@/types';
 
 interface SongFormProps {
@@ -73,7 +73,7 @@ export default function SongForm({
           required
           defaultValue={initialData?.title ?? ''}
           placeholder="e.g. Amazing Grace"
-          className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+          className="field-control"
         />
       </div>
 
@@ -87,7 +87,7 @@ export default function SongForm({
           name="youtube_link"
           defaultValue={prefillYoutubeLink ?? initialData?.youtube_link ?? ''}
           placeholder="https://youtube.com/watch?v=..."
-          className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+          className="field-control"
         />
       </div>
 
@@ -102,10 +102,10 @@ export default function SongForm({
                 key={cat}
                 type="button"
                 onClick={() => toggleCategory(cat)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                className={`min-h-9 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
                   selected
-                    ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
-                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:border-violet-400 hover:text-violet-600'
+                    ? 'border-violet-800 bg-violet-50 text-violet-950 dark:border-violet-400 dark:bg-violet-950/40 dark:text-violet-100'
+                    : 'border-slate-300 bg-white text-slate-600 hover:border-violet-500 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:text-white'
                 }`}
               >
                 {cat}
@@ -119,7 +119,7 @@ export default function SongForm({
             value={otherText}
             onChange={(e) => setOtherText(e.target.value)}
             placeholder="Describe the category…"
-            className="mt-2 w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+            className="field-control mt-2"
           />
         )}
         {selectedCategories.length === 0 && (
@@ -134,7 +134,7 @@ export default function SongForm({
           <select
             name="musical_key"
             defaultValue={initialData?.musical_key ?? ''}
-            className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+            className="field-control"
           >
             <option value="">— Select key —</option>
             {MUSICAL_KEYS.map((key) => (
@@ -150,7 +150,7 @@ export default function SongForm({
           <select
             name="tempo"
             defaultValue={initialData?.tempo ?? ''}
-            className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+            className="field-control"
           >
             <option value="">— Select —</option>
             {TEMPOS.map((tempo) => (
@@ -171,7 +171,7 @@ export default function SongForm({
           <select
             name="rehearsal_status"
             defaultValue={initialData.rehearsal_status ?? 'none'}
-            className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+            className="field-control"
           >
             <option value="none">Not in rehearsal</option>
             <option value="rehearsing">Currently Rehearsing</option>
@@ -193,7 +193,7 @@ export default function SongForm({
           defaultValue={initialData?.notes ?? ''}
           rows={4}
           placeholder="Add rehearsal instructions, arrangement notes, or special instructions..."
-          className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
+          className="field-control resize-none"
         />
       </div>
 
@@ -208,7 +208,7 @@ export default function SongForm({
           defaultValue={initialData?.lyrics ?? ''}
           rows={10}
           placeholder="Paste or type the song lyrics here…"
-          className="w-full border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 resize-y font-mono leading-relaxed"
+          className="field-control resize-y font-mono leading-relaxed"
         />
       </div>
 
@@ -217,14 +217,14 @@ export default function SongForm({
         <button
           type="button"
           onClick={() => router.back()}
-          className="flex-1 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl py-3 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+          className="button-secondary flex-1"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={isPending}
-          className="flex-1 bg-violet-600 text-white rounded-xl py-3 text-sm font-semibold hover:bg-violet-700 disabled:opacity-60 transition-colors"
+          className="button-primary flex-1"
         >
           {isPending ? 'Saving…' : submitLabel}
         </button>

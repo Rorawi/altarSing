@@ -1,74 +1,48 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useLoading } from '@/lib/loading-context';
+import Icon, { type IconName } from '@/components/Icon';
 
-const navItems = [
-  { href: '/library',    label: 'Library',    icon: '🎵' },
-  { href: '/rehearsal',  label: 'Rehearsal',  icon: '🎼' },
-  { href: '/attendance', label: 'Attendance', icon: '✅' },
-  { href: '/log',        label: 'Log',        icon: '📅' },
+const navItems: { href: string; label: string; shortLabel: string; icon: IconName }[] = [
+  { href: '/library', label: 'Library', shortLabel: 'Library', icon: 'library' },
+  { href: '/rehearsal', label: 'Rehearsals', shortLabel: 'Rehearsal', icon: 'music' },
+  { href: '/attendance', label: 'Attendance', shortLabel: 'Attendance', icon: 'people' },
+  { href: '/log', label: 'Service Log', shortLabel: 'Log', icon: 'history' },
 ];
 
 export default function Navigation({ variant }: { variant: 'bottom' | 'side' }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { startLoading } = useLoading();
 
-  const handleNavigation = (href: string) => {
-    // Only show loading if navigating to a different section
-    if (!pathname.startsWith(href)) {
-      startLoading();
-    }
-    router.push(href);
-  };
-
-  if (variant === 'bottom') {
-    return (
-      <nav className="shrink-0 z-50 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
-        <ul className="flex">
-          {navItems.map((item) => {
-            const isActive = pathname.startsWith(item.href);
-            return (
-              <li key={item.href} className="flex-1">
-                <button
-                  onClick={() => handleNavigation(item.href)}
-                  className={`w-full flex flex-col items-center justify-center py-3 px-1 gap-1 transition-colors ${
-                    isActive ? 'text-violet-600 dark:text-violet-400' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
-                  }`}
-                >
-                  <span className="text-4xl leading-none">{item.icon}</span>
-                  <span className={`text-[10px] font-medium ${isActive ? 'text-violet-600 dark:text-violet-400' : ''}`}>
-                    {item.label}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-    );
-  }
-
   return (
-    <nav className="py-3">
-      <ul className="space-y-0.5">
+    <nav aria-label="Primary navigation" className={variant === 'side' ? 'w-full' : 'w-full'}>
+      {variant === 'side' && (
+        <p className="hidden lg:block px-4 mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
+          Workspace
+        </p>
+      )}
+      <ul className={variant === 'side' ? 'space-y-1' : 'flex'}>
         {navItems.map((item) => {
-          const isActive = pathname.startsWith(item.href);
+          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const label = variant === 'bottom' ? item.shortLabel : item.label;
           return (
-            <li key={item.href}>
-              <button
-                onClick={() => handleNavigation(item.href)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg mx-2 text-sm font-medium transition-colors text-left ${
-                  isActive
-                    ? 'bg-violet-50 text-violet-700'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                }`}
+            <li key={item.href} className={variant === 'bottom' ? 'flex-1' : ''}>
+              <Link
+                href={item.href}
+                aria-label={item.label}
+                aria-current={isActive ? 'page' : undefined}
+                onClick={() => {
+                  if (!isActive) startLoading();
+                }}
+                className={variant === 'bottom'
+                  ? `flex min-h-16 w-full flex-col items-center justify-center gap-1 px-1 text-[11px] font-medium transition-colors ${isActive ? 'text-violet-700 dark:text-violet-300' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'}`
+                  : `group flex min-h-10 items-center gap-3 border-l-2 px-3 text-sm transition-colors md:justify-center md:px-0 lg:justify-start lg:px-3 ${isActive ? 'border-violet-700 bg-violet-50/80 font-semibold text-violet-800 dark:border-violet-300 dark:bg-violet-300/10 dark:text-violet-200' : 'border-transparent text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'}`}
               >
-                <span className="text-lg">{item.icon}</span>
-                <span>{item.label}</span>
-              </button>
+                <Icon name={item.icon} size={variant === 'bottom' ? 20 : 18} className="shrink-0" />
+                <span className={variant === 'side' ? 'hidden lg:inline' : ''}>{label}</span>
+              </Link>
             </li>
           );
         })}

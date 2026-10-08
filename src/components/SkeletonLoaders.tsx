@@ -22,18 +22,13 @@ export function SkeletonText({ lines = 1, className = '' }: { lines?: number; cl
 
 export function SkeletonSongCard() {
   return (
-    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 space-y-3">
-      <div className="flex items-start gap-3">
-        <SkeletonPulse className="w-12 h-12 rounded-lg flex-shrink-0" />
-        <div className="flex-1 space-y-2">
-          <SkeletonPulse className="h-5 w-2/3" />
-          <SkeletonPulse className="h-4 w-1/2" />
-        </div>
+    <div className="flex min-h-[76px] items-center gap-4 border-b border-slate-200 py-4 dark:border-slate-800">
+      <div className="min-w-0 flex-1 space-y-2">
+        <SkeletonPulse className="h-5 w-2/5" />
+        <SkeletonPulse className="h-3.5 w-1/4" />
       </div>
-      <div className="flex gap-2">
-        <SkeletonPulse className="h-8 w-16 rounded-full" />
-        <SkeletonPulse className="h-8 w-20 rounded-full" />
-      </div>
+      <SkeletonPulse className="hidden h-4 w-12 sm:block" />
+      <SkeletonPulse className="h-8 w-20" />
     </div>
   );
 }
@@ -42,17 +37,13 @@ export function SkeletonSongCard() {
 
 export function SkeletonMemberCard() {
   return (
-    <div className="shrink-0 snap-center w-[78vw] max-w-[300px] bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-md overflow-hidden flex flex-col">
-      <div className="bg-slate-50 dark:bg-slate-700 px-4 pt-4 pb-5 flex flex-col items-center space-y-3">
-        <SkeletonPulse className="w-24 h-24 rounded-full" />
-        <SkeletonPulse className="h-5 w-2/3" />
-        <SkeletonPulse className="h-4 w-1/2" />
-        <SkeletonPulse className="h-8 w-24 rounded-full" />
+    <div className="flex min-h-[68px] items-center gap-4 border-b border-slate-200 py-3 dark:border-slate-800">
+      <div className="min-w-0 flex-1 space-y-2">
+        <SkeletonPulse className="h-4 w-1/3" />
+        <SkeletonPulse className="h-3 w-1/5" />
       </div>
-      <div className="px-4 py-4 space-y-2">
-        <SkeletonPulse className="h-10 w-full rounded-xl" />
-        <SkeletonPulse className="h-10 w-full rounded-xl" />
-      </div>
+      <SkeletonPulse className="h-9 w-24" />
+      <SkeletonPulse className="h-9 w-24" />
     </div>
   );
 }
@@ -61,20 +52,13 @@ export function SkeletonMemberCard() {
 
 export function SkeletonSessionCard() {
   return (
-    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="space-y-2 flex-1">
-          <SkeletonPulse className="h-5 w-1/2" />
-          <SkeletonPulse className="h-4 w-1/3" />
-        </div>
-        <SkeletonPulse className="h-8 w-16 rounded-lg" />
+    <div className="flex min-h-[72px] items-center gap-4 border-b border-slate-200 py-4 dark:border-slate-800">
+      <SkeletonPulse className="h-9 w-12" />
+      <div className="min-w-0 flex-1 space-y-2">
+        <SkeletonPulse className="h-5 w-2/5" />
+        <SkeletonPulse className="h-3.5 w-1/4" />
       </div>
-      <div className="flex gap-2 flex-wrap">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <SkeletonPulse key={i} className="h-8 w-12 rounded-full" />
-        ))}
-      </div>
-      <SkeletonPulse className="h-20 w-full rounded-xl" />
+      <SkeletonPulse className="h-8 w-16" />
     </div>
   );
 }
@@ -83,21 +67,13 @@ export function SkeletonSessionCard() {
 
 export function SkeletonLogEntry() {
   return (
-    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 space-y-3">
-      <div className="flex items-start justify-between gap-2">
-        <SkeletonPulse className="h-6 w-1/4 rounded-lg" />
-        <SkeletonPulse className="h-5 w-1/3" />
+    <div className="flex gap-5 border-b border-slate-200 py-5 dark:border-slate-800">
+      <SkeletonPulse className="h-10 w-20 shrink-0" />
+      <div className="min-w-0 flex-1 space-y-3">
+        <SkeletonPulse className="h-5 w-2/5" />
+        <SkeletonPulse className="h-4 w-3/5" />
+        <SkeletonPulse className="h-3.5 w-1/4" />
       </div>
-      <div className="space-y-2">
-        {Array.from({ length: 2 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <SkeletonPulse className="w-5 h-5 rounded" />
-            <SkeletonPulse className="h-5 flex-1" />
-            <SkeletonPulse className="h-6 w-12 rounded-lg" />
-          </div>
-        ))}
-      </div>
-      <SkeletonPulse className="h-12 w-full rounded-xl" />
     </div>
   );
 }
@@ -113,7 +89,7 @@ export function SkeletonLibraryPage() {
         <SkeletonPulse className="h-4 w-1/4" />
       </div>
       {/* Search and filter skeleton */}
-      <SkeletonPulse className="h-10 w-full rounded-xl" />
+      <SkeletonPulse className="h-10 w-full rounded-md" />
       <div className="flex gap-2 mb-4">
         {Array.from({ length: 3 }).map((_, i) => (
           <SkeletonPulse key={i} className="h-8 w-20 rounded-full" />
@@ -138,15 +114,15 @@ export function SkeletonAttendancePage() {
         <SkeletonPulse className="h-4 w-1/4" />
       </div>
       {/* Date picker skeleton */}
-      <SkeletonPulse className="h-10 w-full rounded-xl mb-3" />
+      <SkeletonPulse className="h-10 w-full rounded-md mb-3" />
       {/* Stats skeleton */}
       <div className="flex gap-2 mb-4">
         {Array.from({ length: 3 }).map((_, i) => (
           <SkeletonPulse key={i} className="flex-1 h-20 rounded-xl" />
         ))}
       </div>
-      {/* Member cards carousel skeleton */}
-      <div className="flex gap-3 -mx-4 px-4">
+      {/* Compact roster rows */}
+      <div>
         {Array.from({ length: 3 }).map((_, i) => (
           <SkeletonMemberCard key={i} />
         ))}
@@ -166,7 +142,7 @@ export function SkeletonRehearsalPage() {
       {/* Action buttons skeleton */}
       <div className="flex gap-2 mb-4">
         {Array.from({ length: 2 }).map((_, i) => (
-          <SkeletonPulse key={i} className="h-10 flex-1 rounded-xl" />
+          <SkeletonPulse key={i} className="h-10 flex-1 rounded-md" />
         ))}
       </div>
       {/* Session cards skeleton */}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Icon from '@/components/Icon';
 
 interface Member {
   id: string;
@@ -115,7 +116,7 @@ export default function WheelClient({ members }: { members: Member[] }) {
 
       {!hasMembers ? (
         <div className="text-center py-14 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl">
-          <p className="text-4xl mb-3">🎯</p>
+          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400"><Icon name="shuffle" /></div>
           <p className="text-slate-600 dark:text-slate-300 font-medium">No choir members found</p>
           <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Add members in Attendance first.</p>
         </div>

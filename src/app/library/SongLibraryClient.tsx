@@ -8,6 +8,8 @@ import { SONG_CATEGORIES, MUSICAL_KEYS } from '@/lib/constants';
 import SongCard from '@/components/SongCard';
 import CollectionsClient from './CollectionsClient';
 import { addSongToCollection } from '@/lib/actions';
+import PageHeader from '@/components/PageHeader';
+import Icon from '@/components/Icon';
 
 export default function SongLibraryClient({
   initialSongs,
@@ -57,200 +59,90 @@ export default function SongLibraryClient({
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Song Library</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            {initialSongs.length} song{initialSongs.length !== 1 ? 's' : ''}
-            {hasFilters && activeTab === 'songs' ? ` · ${filtered.length} shown` : ''}
-          </p>
-        </div>
-        {activeTab === 'songs' && (
-          <div className="flex items-center gap-2">
-            <Link
-              href="/quick-add"
-              className="border border-violet-300 dark:border-violet-600 text-violet-600 dark:text-violet-400 px-3 py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors flex items-center gap-1 shadow-sm"
-            >
-              ⚡ Quick Add
-            </Link>
-            <Link
-              href="/library/new"
-              className="bg-violet-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors flex items-center gap-1.5 shadow-sm"
-            >
-              + Add
-            </Link>
-          </div>
-        )}
+      <PageHeader
+        title="Song library"
+        description={<>{initialSongs.length} song{initialSongs.length !== 1 ? 's' : ''}{hasFilters && activeTab === 'songs' ? ` · ${filtered.length} shown` : ''}</>}
+        actions={activeTab === 'songs' ? <>
+          <Link href="/quick-add" className="button-secondary"><Icon name="sparkles" size={16} />Quick add</Link>
+          <Link href="/library/new" className="button-primary"><Icon name="plus" size={17} />Add song</Link>
+        </> : undefined}
+      />
+
+      <div className="mb-6 flex gap-6 border-b border-slate-200 dark:border-slate-800">
+        {([
+          ['songs', 'Songs', initialSongs.length],
+          ['collections', 'Collections', initialCollections.length],
+        ] as const).map(([value, label, count]) => (
+          <button
+            key={value}
+            onClick={() => setActiveTab(value)}
+            aria-current={activeTab === value ? 'page' : undefined}
+            className={`-mb-px flex min-h-11 items-center gap-2 border-b-2 px-1 text-sm font-medium transition-colors ${activeTab === value ? 'border-violet-800 text-violet-900 dark:border-violet-300 dark:text-violet-200' : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'}`}
+          >
+            {label}<span className="text-xs tabular-nums text-slate-400">{count}</span>
+          </button>
+        ))}
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-0 mb-5 border-b border-slate-200 dark:border-slate-700">
-        <button
-          onClick={() => setActiveTab('songs')}
-          className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px ${
-            activeTab === 'songs'
-              ? 'border-violet-600 text-violet-600 dark:text-violet-400 dark:border-violet-400'
-              : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-          }`}
-        >
-          Songs
-        </button>
-        <button
-          onClick={() => setActiveTab('collections')}
-          className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px ${
-            activeTab === 'collections'
-              ? 'border-violet-600 text-violet-600 dark:text-violet-400 dark:border-violet-400'
-              : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-          }`}
-        >
-          Collections
-          {initialCollections.length > 0 && (
-            <span className="ml-1.5 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-              {initialCollections.length}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* Collections tab */}
       {activeTab === 'collections' && (
         <CollectionsClient collections={initialCollections} librarySongs={initialSongs} />
       )}
 
-      {/* Songs tab */}
       {activeTab === 'songs' && (
         <>
-      {/* Search */}
-      <div className="relative mb-3">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
-        <input
-          type="text"
-          placeholder="Search songs or notes…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-4 py-2.5 border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
-        />
-        {search && (
-          <button
-            onClick={() => setSearch('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
-          >
-            ✕
-          </button>
-        )}
-      </div>
-
-      {/* Filter bar */}
-      <div className="flex gap-2 mb-5 overflow-x-auto pb-1 scrollbar-none">
-        <select
-          value={filterCategory}
-          onChange={(e) => setFilterCategory(e.target.value)}
-          className="shrink-0 border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-violet-400 text-slate-600"
-        >
-          <option value="">All Categories</option>
-          {SONG_CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={filterKey}
-          onChange={(e) => setFilterKey(e.target.value)}
-          className="shrink-0 border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-violet-400 text-slate-600"
-        >
-          <option value="">All Keys</option>
-          {MUSICAL_KEYS.map((k) => (
-            <option key={k} value={k}>
-              {k}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as SortOption)}
-          className="shrink-0 border border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-violet-400 text-slate-600"
-        >
-          <option value="date_desc">Newest First</option>
-          <option value="date_asc">Oldest First</option>
-          <option value="title_asc">A → Z</option>
-          <option value="title_desc">Z → A</option>
-        </select>
-
-        {hasFilters && (
-          <button
-            onClick={() => {
-              setSearch('');
-              setFilterCategory('');
-              setFilterKey('');
-            }}
-            className="shrink-0 text-xs text-violet-600 hover:text-violet-800 px-2 font-medium"
-          >
-            Clear
-          </button>
-        )}
-      </div>
-
-      {/* Song list */}
-      {filtered.length === 0 ? (
-        <div className="text-center py-20">
-          <p className="text-5xl mb-4">🎵</p>
-          <p className="text-slate-500 dark:text-slate-400 font-medium text-lg">
-            {initialSongs.length === 0 ? 'Your library is empty' : 'No songs match your filters'}
-          </p>
-          {initialSongs.length === 0 ? (
-            <div className="mt-4 space-y-3">
-              <Link
-                href="/quick-add"
-                className="inline-flex items-center gap-2 bg-violet-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors"
-              >
-                ⚡ Quick Add a song
-              </Link>
-              <p className="text-sm text-slate-400 dark:text-slate-500">or</p>
-              <Link href="/library/new" className="inline-block text-violet-600 dark:text-violet-400 text-sm hover:underline">
-                Fill in details manually
-              </Link>
+          <div className="mb-5 flex flex-col gap-3 xl:flex-row xl:items-center">
+            <label className="relative block min-w-0 flex-1">
+              <span className="sr-only">Search songs or notes</span>
+              <Icon name="search" size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="search"
+                placeholder="Search songs or notes…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="field-control pl-10"
+              />
+            </label>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:flex xl:flex-nowrap">
+              <select aria-label="Filter by category" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="field-control xl:w-48 xl:shrink-0">
+                <option value="">All categories</option>
+                {SONG_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <select aria-label="Filter by key" value={filterKey} onChange={(e) => setFilterKey(e.target.value)} className="field-control xl:w-32 xl:shrink-0">
+                <option value="">All keys</option>
+                {MUSICAL_KEYS.map((k) => <option key={k} value={k}>{k}</option>)}
+              </select>
+              <select aria-label="Sort songs" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortOption)} className="field-control col-span-2 sm:col-span-1 xl:w-40 xl:shrink-0">
+                <option value="date_desc">Newest first</option>
+                <option value="date_asc">Oldest first</option>
+                <option value="title_asc">A to Z</option>
+                <option value="title_desc">Z to A</option>
+              </select>
+              {hasFilters && (
+              <button onClick={() => { setSearch(''); setFilterCategory(''); setFilterKey(''); }} className="button-quiet col-span-2 sm:col-span-1 xl:col-span-1 xl:shrink-0">
+                  Clear filters
+                </button>
+              )}
             </div>
-          ) : search ? (
-            <div className="mt-4 space-y-3">
-              <p className="text-sm text-slate-400 dark:text-slate-500">
-                Not in your library yet?
-              </p>
-              <Link
-                href="/quick-add"
-                className="inline-flex items-center gap-2 bg-violet-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors"
-              >
-                ⚡ Quick Add it
-              </Link>
+          </div>
+
+          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+            <div className="hidden grid-cols-[minmax(0,1.45fr)_minmax(150px,1fr)_minmax(130px,.85fr)_auto] gap-4 border-b border-slate-200 bg-slate-50 px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400 xl:grid">
+              <span>Song</span><span>Musical information</span><span>Rehearsal</span><span className="text-right">Actions</span>
             </div>
-          ) : (
-            <button
-              onClick={() => {
-                setSearch('');
-                setFilterCategory('');
-                setFilterKey('');
-              }}
-              className="mt-3 text-sm text-violet-600 hover:underline"
-            >
-              Clear filters
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {filtered.map((song) => (
-            <SongCard
-              key={song.id}
-              song={song}
-              onAddToCollection={() => setAddToCollectionSong(song)}
-            />
-          ))}
-        </div>
-      )}
-      </>
+            {filtered.length === 0 ? (
+              <div className="px-5 py-16 text-center">
+                <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400"><Icon name="music" size={19} /></div>
+                <p className="font-medium text-slate-800 dark:text-slate-100">{initialSongs.length === 0 ? 'Your library is empty' : 'No songs match these filters'}</p>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{initialSongs.length === 0 ? 'Add a song to begin building your repertoire.' : 'Try a different search or clear the filters.'}</p>
+                {initialSongs.length === 0 ? <Link href="/quick-add" className="button-primary mt-5"><Icon name="plus" size={16} />Add your first song</Link> : hasFilters && <button onClick={() => { setSearch(''); setFilterCategory(''); setFilterKey(''); }} className="button-quiet mt-3">Clear filters</button>}
+              </div>
+            ) : (
+              <div>
+                {filtered.map((song) => <SongCard key={song.id} song={song} onAddToCollection={() => setAddToCollectionSong(song)} />)}
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {/* Add to Collection modal */}

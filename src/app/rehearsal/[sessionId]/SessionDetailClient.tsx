@@ -34,6 +34,7 @@ import {
 } from '@/lib/actions';
 import { MUSICAL_KEYS, SERVICE_MOMENTS } from '@/lib/constants';
 import LyricsModal from '@/components/LyricsModal';
+import Icon from '@/components/Icon';
 
 // ─── Types & Helpers ──────────────────────────────────────────────────────────
 
@@ -218,9 +219,7 @@ export default function SessionDetailClient({
           href="/rehearsal"
           className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-1 -ml-1 mt-0.5 shrink-0"
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
+          <Icon name="arrow-left" size={20} />
         </Link>
         <div className="flex-1 min-w-0">
           <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 leading-snug">
@@ -236,7 +235,7 @@ export default function SessionDetailClient({
       </div>
 
       {/* Program Date card */}
-      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 mb-4">
+      <div className="mb-5 border-y border-slate-200 py-4 dark:border-slate-800">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-0.5">
@@ -253,7 +252,7 @@ export default function SessionDetailClient({
               </p>
             ) : session.program_date ? (
               <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">
-                📅{' '}
+                <Icon name="calendar" size={15} className="mr-1 inline-block" />
                 {new Date(session.program_date + 'T00:00:00').toLocaleDateString('en-US', {
                   month: 'short',
                   day: 'numeric',
@@ -285,7 +284,7 @@ export default function SessionDetailClient({
             <button
               onClick={handleSaveProgramDate}
               disabled={isPending}
-              className="bg-violet-600 text-white px-3 py-2 rounded-xl text-sm font-medium hover:bg-violet-700 disabled:opacity-50 shrink-0"
+              className="button-primary min-h-9 shrink-0 px-3"
             >
               Save
             </button>
@@ -309,7 +308,7 @@ export default function SessionDetailClient({
         </p>
         <button
           onClick={() => setAddMode(addMode ? null : 'picker')}
-          className="bg-violet-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors shadow-sm"
+          className="button-primary"
         >
           {addMode ? 'Cancel' : '+ Add Song'}
         </button>
@@ -326,7 +325,7 @@ export default function SessionDetailClient({
               onClick={() => setAddMode('single')}
               className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-violet-200 dark:border-violet-700 hover:border-violet-500 dark:hover:border-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors"
             >
-              <span className="text-2xl">🎵</span>
+              <Icon name="music" size={21} className="text-violet-800 dark:text-violet-300" />
               <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
                 Single Song
               </span>
@@ -338,7 +337,7 @@ export default function SessionDetailClient({
               onClick={() => setAddMode('medley-create')}
               className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-amber-200 dark:border-amber-700 hover:border-amber-500 dark:hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
             >
-              <span className="text-2xl">🎼</span>
+              <Icon name="music" size={21} className="text-amber-700 dark:text-amber-300" />
               <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
                 Medley
               </span>
@@ -381,11 +380,11 @@ export default function SessionDetailClient({
       {/* ─── Empty state ─── */}
       {isEmpty && (
         <div className="text-center py-16">
-          <p className="text-4xl mb-3">🎶</p>
+          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400"><Icon name="music" /></div>
           <p className="text-slate-500 dark:text-slate-400 font-medium">No songs yet</p>
           <button
             onClick={() => setAddMode('picker')}
-            className="mt-4 bg-violet-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors"
+          className="button-primary mt-4"
           >
             Add first song
           </button>
@@ -403,7 +402,7 @@ export default function SessionDetailClient({
             items={sessionItems.map((i) => i.id)}
             strategy={verticalListSortingStrategy}
           >
-            <div className="space-y-3">
+            <div className="space-y-0">
               {sessionItems.map((item, index) => {
                 if (item.itemType === 'song') {
                   return (
@@ -556,10 +555,10 @@ function StandaloneSongCard({
   }
 
   return (
-    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-visible">
-      <div className="p-4">
+    <div className="border-b border-slate-200 last:border-b-0 dark:border-slate-800">
+      <div className="py-3">
         {/* Top row: drag, position, title, menu */}
-        <div className="flex items-center gap-3 mb-2">
+        <div className="flex items-center gap-3">
           <button
             type="button"
             {...dragListeners}
@@ -573,10 +572,10 @@ function StandaloneSongCard({
               <circle cx="5" cy="12" r="1.5" /><circle cx="11" cy="12" r="1.5" />
             </svg>
           </button>
-          <span className="shrink-0 w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 text-xs font-bold flex items-center justify-center">
+          <span className="shrink-0 w-7 text-center font-mono text-xs tabular-nums text-slate-400 dark:text-slate-500">
             {position}
           </span>
-          <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm leading-snug flex-1 min-w-0 truncate">
+          <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm leading-snug flex-1 min-w-0 break-words">
             {song.song_title}
           </p>
           {/* Three-dot menu */}
@@ -621,9 +620,9 @@ function StandaloneSongCard({
         </div>
 
         {/* Bottom row: key, run-throughs, leaders, lyrics pill */}
-        <div className="flex items-center gap-2 mt-2 ml-10 flex-wrap">
+        <div className="flex items-center gap-x-2 gap-y-1 mt-1 ml-10 flex-wrap text-xs">
           {song.key_used && (
-            <span className="bg-violet-600 text-white text-xs font-bold px-2 py-0.5 rounded-lg">
+            <span className="font-semibold tabular-nums text-violet-900 dark:text-violet-200">
               {song.key_used}
             </span>
           )}
@@ -641,17 +640,17 @@ function StandaloneSongCard({
             </span>
           )}
           {song.service_moment && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 font-medium border border-violet-200 dark:border-violet-700">
+            <span className="text-slate-500 dark:text-slate-400">
               {song.service_moment}
             </span>
           )}
           {/* Lyrics pill button */}
           <button
             onClick={() => setLyricsOpen(true)}
-            className="ml-auto px-3 py-1 border border-violet-200 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 rounded-full text-xs font-medium hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-colors flex items-center gap-1 shrink-0"
+            className="button-quiet ml-auto min-h-8 shrink-0 px-2 text-xs"
             title="View lyrics"
           >
-            <span>🎵</span> Lyrics
+            <Icon name="lyrics" size={14} />Lyrics
           </button>
         </div>
 
@@ -731,9 +730,9 @@ function MedleyGroupCard({
     group.songs.length > 0 ? group.songs[group.songs.length - 1].key_used : null;
 
   return (
-    <div className="border-2 border-amber-200 dark:border-amber-700 rounded-2xl overflow-hidden bg-amber-50/50 dark:bg-amber-950/20">
+    <div className="border-l-2 border-amber-400 bg-amber-50/20 dark:border-amber-700 dark:bg-amber-950/10">
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-3 bg-amber-50 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-700">
+      <div className="flex items-center gap-2 border-b border-amber-200/80 px-3 py-2.5 dark:border-amber-800/60">
         <button
           type="button"
           {...dragListeners}
@@ -747,7 +746,7 @@ function MedleyGroupCard({
             <circle cx="5" cy="12" r="1.5" /><circle cx="11" cy="12" r="1.5" />
           </svg>
         </button>
-        <span className="shrink-0 w-7 h-7 rounded-full bg-amber-200 dark:bg-amber-800/60 text-amber-800 dark:text-amber-300 text-xs font-bold flex items-center justify-center">
+        <span className="shrink-0 w-7 text-center font-mono text-xs tabular-nums text-amber-700 dark:text-amber-400">
           {position}
         </span>
         <div className="flex-1 min-w-0">
@@ -800,7 +799,7 @@ function MedleyGroupCard({
 
       {/* Expanded content */}
       {!collapsed && (
-        <div className="p-3">
+        <div className="px-3 py-2">
           {group.songs.length > 0 && (
             <DndContext
               sensors={sensors}
@@ -824,7 +823,7 @@ function MedleyGroupCard({
                             {keyChanged ? (
                               <div className="flex items-center gap-1.5 py-1">
                                 <div className="w-px h-3 bg-amber-300 dark:bg-amber-600" />
-                                <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-700">
+                                <span className="text-[10px] font-semibold text-amber-800 dark:text-amber-300">
                                   {prevKey && currKey ? `${prevKey} → ${currKey}` : 'key change'}
                                 </span>
                                 <div className="w-px h-3 bg-amber-300 dark:bg-amber-600" />
@@ -887,7 +886,7 @@ function MedleyGroupCard({
           {group.songs.map((s) => (
             <span
               key={s.id}
-              className="text-[11px] text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded-full"
+              className="text-xs text-slate-500 dark:text-slate-400"
             >
               {s.song_title}
               {s.key_used && <span className="ml-1 font-bold opacity-70">{s.key_used}</span>}
@@ -978,8 +977,8 @@ function MedleySongCard({
   }
 
   return (
-    <div className="bg-white dark:bg-slate-800 border border-amber-100 dark:border-amber-800/40 rounded-xl overflow-visible">
-      <div className="px-3 py-2.5">
+    <div className="border-b border-amber-200/70 last:border-b-0 dark:border-amber-800/40">
+      <div className="py-2.5">
         {/* Top row: drag, position, title, menu */}
         <div className="flex items-center gap-2 mb-1.5">
           <button
@@ -995,10 +994,10 @@ function MedleySongCard({
               <circle cx="5" cy="12" r="1.5" /><circle cx="11" cy="12" r="1.5" />
             </svg>
           </button>
-          <span className="shrink-0 w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-800/40 text-amber-700 dark:text-amber-300 text-[10px] font-bold flex items-center justify-center">
+          <span className="shrink-0 w-5 text-center font-mono text-[10px] tabular-nums text-amber-700 dark:text-amber-400">
             {position}
           </span>
-          <p className="font-semibold text-slate-800 dark:text-slate-100 text-sm leading-snug flex-1 min-w-0 truncate">
+          <p className="font-semibold text-slate-800 dark:text-slate-100 text-sm leading-snug flex-1 min-w-0 break-words">
             {song.song_title}
           </p>
           {/* Three-dot menu */}
@@ -1043,34 +1042,34 @@ function MedleySongCard({
         </div>
 
         {/* Bottom row: key, run-throughs, leaders, lyrics pill */}
-        <div className="flex items-center gap-1.5 mt-1 ml-8 flex-wrap">
+        <div className="flex items-center gap-x-2 gap-y-1 mt-1 ml-8 flex-wrap text-xs">
           {song.key_used && (
-            <span className="bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">
+            <span className="font-semibold tabular-nums text-amber-800 dark:text-amber-300">
               {song.key_used}
             </span>
           )}
           {song.run_throughs > 0 && (
-            <span className="text-[11px] text-slate-400 dark:text-slate-500">
+            <span className="text-slate-500 dark:text-slate-400">
               × {song.run_throughs}
             </span>
           )}
           {song.song_leaders && song.song_leaders.length > 0 && (
-            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+            <span className="text-slate-500 dark:text-slate-400">
               Led by: <span className="font-medium text-slate-600 dark:text-slate-300">{song.song_leaders.join(', ')}</span>
             </span>
           )}
           {song.service_moment && (
-            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-medium border border-amber-200 dark:border-amber-700">
+            <span className="text-slate-500 dark:text-slate-400">
               {song.service_moment}
             </span>
           )}
           {/* Lyrics pill button */}
           <button
             onClick={() => setLyricsOpen(true)}
-            className="ml-auto px-2 py-0.5 border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 rounded-full text-[10px] font-medium hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors flex items-center gap-1 shrink-0"
+            className="button-quiet ml-auto min-h-8 shrink-0 px-2 text-xs text-amber-800 dark:text-amber-300"
             title="View lyrics"
           >
-            🎵 Lyrics
+            <><Icon name="lyrics" size={14} />Lyrics</>
           </button>
         </div>
 

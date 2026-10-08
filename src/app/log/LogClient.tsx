@@ -7,6 +7,8 @@ import type { ServiceLog, LogSong } from '@/types';
 import { SERVICE_MOMENTS } from '@/lib/constants';
 import LogEntryCard from '@/components/LogEntryCard';
 import { confirmAutoLog, undoAutoLog } from '@/lib/actions';
+import PageHeader from '@/components/PageHeader';
+import Icon from '@/components/Icon';
 
 export default function LogClient({ initialLogs }: { initialLogs: ServiceLog[] }) {
   const router = useRouter();
@@ -17,39 +19,24 @@ export default function LogClient({ initialLogs }: { initialLogs: ServiceLog[] }
   const [filterDateTo, setFilterDateTo] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
-  // Separate pending reviews from normal log entries
-  const pendingReviews = initialLogs.filter((l) => l.is_auto_generated && !l.reviewed);
-  const normalLogs = initialLogs.filter((l) => !l.is_auto_generated || l.reviewed);
-
+  const pendingReviews = initialLogs.filter((log) => log.is_auto_generated && !log.reviewed);
+  const normalLogs = initialLogs.filter((log) => !log.is_auto_generated || log.reviewed);
   const filtered = useMemo(() => {
     let list = [...normalLogs];
     if (filterTitle.trim()) {
-      const q = filterTitle.toLowerCase();
-      list = list.filter((l) =>
-        l.song_title.toLowerCase().includes(q) ||
-        l.songs.some((s) => s.title.toLowerCase().includes(q)),
-      );
+      const query = filterTitle.toLowerCase();
+      list = list.filter((log) => log.song_title.toLowerCase().includes(query) || log.songs.some((song) => song.title.toLowerCase().includes(query)));
     }
     if (filterSinger.trim()) {
-      const q = filterSinger.toLowerCase();
-      list = list.filter(
-        (l) =>
-          l.lead_singer?.toLowerCase().includes(q) ||
-          l.lead_singers.some((s) => s.toLowerCase().includes(q)),
-      );
+      const query = filterSinger.toLowerCase();
+      list = list.filter((log) => log.lead_singer?.toLowerCase().includes(query) || log.lead_singers.some((singer) => singer.toLowerCase().includes(query)));
     }
-    if (filterTag) {
-      list = list.filter((l) => {
-        if (l.service_moment === filterTag) return true;
-        return l.songs.some((s) => s.tags?.includes(filterTag));
-      });
-    }
-    if (filterDateFrom) list = list.filter((l) => l.service_date >= filterDateFrom);
-    if (filterDateTo) list = list.filter((l) => l.service_date <= filterDateTo);
+    if (filterTag) list = list.filter((log) => log.service_moment === filterTag || log.songs.some((song) => song.tags?.includes(filterTag)));
+    if (filterDateFrom) list = list.filter((log) => log.service_date >= filterDateFrom);
+    if (filterDateTo) list = list.filter((log) => log.service_date <= filterDateTo);
     return list;
   }, [normalLogs, filterTitle, filterSinger, filterTag, filterDateFrom, filterDateTo]);
 
-  // Group entries by service date
   const grouped = useMemo(() => {
     const map = new Map<string, ServiceLog[]>();
     filtered.forEach((log) => {
@@ -58,179 +45,62 @@ export default function LogClient({ initialLogs }: { initialLogs: ServiceLog[] }
     });
     return map;
   }, [filtered]);
-
   const sortedDates = Array.from(grouped.keys()).sort((a, b) => b.localeCompare(a));
-  const hasFilters = filterTitle || filterSinger || filterTag || filterDateFrom || filterDateTo;
+  const hasFilters = Boolean(filterTitle || filterSinger || filterTag || filterDateFrom || filterDateTo);
+
   function clearFilters() {
-    setFilterTitle('');
-    setFilterSinger('');
-    setFilterTag('');
-    setFilterDateFrom('');
-    setFilterDateTo('');
+    setFilterTitle(''); setFilterSinger(''); setFilterTag(''); setFilterDateFrom(''); setFilterDateTo('');
   }
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Service Log</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            {normalLogs.length} entr{normalLogs.length !== 1 ? 'ies' : 'y'}
-            {hasFilters ? ` · ${filtered.length} shown` : ''}
-            {pendingReviews.length > 0 ? ` · ${pendingReviews.length} awaiting review` : ''}
-          </p>
-        </div>
-        <Link
-          href="/log/new"
-          className="bg-violet-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors shadow-sm"
-        >
-          + Log Entry
-        </Link>
-      </div>
-      {/* Pending review banners */}
-      {pendingReviews.length > 0 && (
-        <div className="space-y-3 mb-5">
-          {pendingReviews.map((log) => (
-            <ReviewBanner key={log.id} log={log} onDone={() => router.refresh()} />
-          ))}
-        </div>
-      )}
+      <PageHeader
+        title="Service log"
+        description={<>{normalLogs.length} service entr{normalLogs.length === 1 ? 'y' : 'ies'}{hasFilters ? ` · ${filtered.length} shown` : ''}{pendingReviews.length > 0 ? ` · ${pendingReviews.length} to review` : ''}</>}
+        actions={<Link href="/log/new" className="button-primary"><Icon name="plus" size={16} />Log a service</Link>}
+      />
 
-      {/* Tag filter tabs — single-select */}
-      <div className="flex gap-2 overflow-x-auto pb-1 mb-4 scrollbar-none">
-        <button
-          onClick={() => setFilterTag('')}
-          className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-            filterTag === ''
-              ? 'bg-violet-600 text-white shadow-sm'
-              : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-violet-300'
-          }`}
-        >
-          All
-        </button>
-        {SERVICE_MOMENTS.map((m) => (
-          <button
-            key={m}
-            onClick={() => setFilterTag(m === filterTag ? '' : m)}
-            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-              filterTag === m
-                ? 'bg-violet-600 text-white shadow-sm'
-                : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-violet-300'
-            }`}
-          >
-            {m}
+      {pendingReviews.length > 0 && <section aria-label="Entries to review" className="mb-6 border-l-2 border-amber-600 bg-amber-50/70 dark:border-amber-400 dark:bg-amber-300/5">
+        {pendingReviews.map((log) => <ReviewBanner key={log.id} log={log} onDone={() => router.refresh()} />)}
+      </section>}
+
+      <div className="mb-4 flex gap-5 overflow-x-auto border-b border-slate-200 dark:border-slate-800">
+        {['', ...SERVICE_MOMENTS].map((moment) => (
+          <button key={moment || 'all'} onClick={() => setFilterTag(filterTag === moment ? '' : moment)} aria-pressed={filterTag === moment} className={`-mb-px min-h-10 shrink-0 border-b-2 px-0.5 text-sm transition-colors ${filterTag === moment ? 'border-violet-800 font-medium text-violet-900 dark:border-violet-300 dark:text-violet-200' : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'}`}>
+            {moment || 'All services'}
           </button>
         ))}
       </div>
 
-      {/* Filter toggle */}
-      <button
-        onClick={() => setShowFilters(!showFilters)}
-        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium mb-3 border transition-colors ${
-          showFilters || hasFilters
-            ? 'bg-violet-50 dark:bg-violet-900/30 border-violet-200 dark:border-violet-700 text-violet-700 dark:text-violet-300'
-            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'
-        }`}
-      >
-        <span className="flex items-center gap-2">
-          <span>🔍</span>
-          <span>
-            {hasFilters ? `Filters active (${filtered.length} results)` : 'Search & Filter'}
-          </span>
-        </span>
-        <span className="text-xs">{showFilters ? '▲' : '▼'}</span>
-      </button>
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <button onClick={() => setShowFilters((value) => !value)} aria-expanded={showFilters} className="button-secondary self-start"><Icon name="filter" size={16} />{showFilters ? 'Hide filters' : 'Search and filter'}{hasFilters && <span className="ml-1 text-violet-800 dark:text-violet-300">· Active</span>}</button>
+        {hasFilters && <button onClick={clearFilters} className="button-quiet self-start sm:self-auto">Clear filters</button>}
+      </div>
 
-      {/* Filters panel */}
-      {showFilters && (
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 mb-4 space-y-3">
-          <input
-            type="text"
-            placeholder="Search by song title…"
-            value={filterTitle}
-            onChange={(e) => setFilterTitle(e.target.value)}
-            className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
-          />
+      {showFilters && <div className="mb-5 grid gap-3 border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 sm:grid-cols-2 lg:grid-cols-5">
+        <label className="text-xs font-medium text-slate-500 dark:text-slate-400 lg:col-span-2">Song title<input type="search" placeholder="Search songs…" value={filterTitle} onChange={(event) => setFilterTitle(event.target.value)} className="field-control mt-1" /></label>
+        <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Lead singer<input type="search" placeholder="Search names…" value={filterSinger} onChange={(event) => setFilterSinger(event.target.value)} className="field-control mt-1" /></label>
+        <label className="text-xs font-medium text-slate-500 dark:text-slate-400">From date<input type="date" value={filterDateFrom} onChange={(event) => setFilterDateFrom(event.target.value)} className="field-control mt-1" /></label>
+        <label className="text-xs font-medium text-slate-500 dark:text-slate-400">To date<input type="date" value={filterDateTo} onChange={(event) => setFilterDateTo(event.target.value)} className="field-control mt-1" /></label>
+      </div>}
 
-          <input
-            type="text"
-            placeholder="Lead singer…"
-            value={filterSinger}
-            onChange={(e) => setFilterSinger(e.target.value)}
-            className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-500 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
-          />
-
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">From date</label>
-              <input
-                type="date"
-                value={filterDateFrom}
-                onChange={(e) => setFilterDateFrom(e.target.value)}
-                className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">To date</label>
-              <input
-                type="date"
-                value={filterDateTo}
-                onChange={(e) => setFilterDateTo(e.target.value)}
-                className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
-              />
-            </div>
-          </div>
-
-          {hasFilters && (
-            <button
-              onClick={clearFilters}
-              className="text-xs text-violet-600 hover:text-violet-800 font-medium"
-            >
-              ✕ Clear all filters
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Log entries */}
       {filtered.length === 0 ? (
-        <div className="text-center py-20">
-          <p className="text-5xl mb-4">📅</p>
-          <p className="text-slate-500 font-medium text-lg">
-            {normalLogs.length === 0 ? 'No service entries yet' : 'No entries match your filters'}
-          </p>
-          {normalLogs.length === 0 ? (
-            <Link
-              href="/log/new"
-              className="mt-4 inline-block bg-violet-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-violet-700 transition-colors"
-            >
-              Log your first service
-            </Link>
-          ) : (
-            <button onClick={clearFilters} className="mt-3 text-sm text-violet-600 hover:underline">
-              Clear filters
-            </button>
-          )}
+        <div className="border-y border-slate-200 py-16 text-center dark:border-slate-800">
+          <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400"><Icon name="history" /></div>
+          <h2 className="font-medium text-slate-800 dark:text-slate-100">{normalLogs.length === 0 ? 'No service entries yet' : 'No entries match these filters'}</h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{normalLogs.length === 0 ? 'Record the music from a service to start your history.' : 'Try a different search or date range.'}</p>
+          {normalLogs.length === 0 ? <Link href="/log/new" className="button-primary mt-5"><Icon name="plus" size={16} />Log your first service</Link> : <button onClick={clearFilters} className="button-quiet mt-3">Clear filters</button>}
         </div>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-7">
           {sortedDates.map((date) => (
-            <div key={date}>
-              <h2 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 px-1">
-                {new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </h2>
-              <div className="space-y-2">
-                {grouped.get(date)!.map((log) => (
-                  <LogEntryCard key={log.id} log={log} />
-                ))}
+            <section key={date} aria-label={new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}>
+              <div className="mb-2 flex items-baseline justify-between gap-3 border-b border-slate-300 pb-2 dark:border-slate-700">
+                <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">{new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</h2>
+                <span className="shrink-0 text-xs tabular-nums text-slate-400">{grouped.get(date)!.length} record{grouped.get(date)!.length !== 1 ? 's' : ''}</span>
               </div>
-            </div>
+              <div>{grouped.get(date)!.map((log) => <LogEntryCard key={log.id} log={log} />)}</div>
+            </section>
           ))}
         </div>
       )}
@@ -238,125 +108,47 @@ export default function LogClient({ initialLogs }: { initialLogs: ServiceLog[] }
   );
 }
 
-// ─── Review Banner ────────────────────────────────────────────────────────────
-
 function ReviewBanner({ log, onDone }: { log: ServiceLog; onDone: () => void }) {
   const [isPending, startTransition] = useTransition();
   const [removedIndices, setRemovedIndices] = useState<Set<number>>(new Set());
   const [expanded, setExpanded] = useState(true);
 
-  function toggleSong(i: number) {
-    setRemovedIndices((prev) => {
-      const next = new Set(prev);
-      if (next.has(i)) next.delete(i);
-      else next.add(i);
+  function toggleSong(index: number) {
+    setRemovedIndices((previous) => {
+      const next = new Set(previous);
+      if (next.has(index)) next.delete(index); else next.add(index);
       return next;
     });
   }
-
   function handleConfirm() {
-    startTransition(async () => {
-      await confirmAutoLog(log.id, [...removedIndices]);
-      onDone();
-    });
+    startTransition(async () => { await confirmAutoLog(log.id, [...removedIndices]); onDone(); });
   }
-
   function handleUndo() {
     if (!log.source_session_id) return;
-    startTransition(async () => {
-      await undoAutoLog(log.id, log.source_session_id!);
-      onDone();
-    });
+    startTransition(async () => { await undoAutoLog(log.id, log.source_session_id!); onDone(); });
   }
 
-  const programDate = new Date(log.service_date + 'T00:00:00').toLocaleDateString('en-US', {
-    month: 'long', day: 'numeric', year: 'numeric',
-  });
+  const programDate = new Date(`${log.service_date}T00:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   const keptCount = log.songs.length - removedIndices.size;
 
   return (
-    <div className="border-2 border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded-2xl overflow-hidden">
-      <div className="p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-0.5">
-              <span>🎉</span>
-              <p className="font-semibold text-amber-900 dark:text-amber-100 text-sm leading-snug truncate">
-                Auto-logged: {log.source_session_name}
-              </p>
-            </div>
-            <p className="text-xs text-amber-700 dark:text-amber-400">
-              {programDate} · {log.songs.length} song{log.songs.length !== 1 ? 's' : ''}
-            </p>
-          </div>
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            className="text-amber-500 dark:text-amber-400 text-xs shrink-0 mt-0.5"
-          >
-            {expanded ? '▲' : '▼'}
-          </button>
-        </div>
-
-        {expanded && (
-          <>
-            <p className="text-xs text-amber-700 dark:text-amber-400 mt-3 mb-2 font-medium">
-              Tap any song you didn&apos;t perform to remove it:
-            </p>
-            <div className="space-y-1.5 mb-4">
-              {(log.songs as LogSong[]).map((song, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => toggleSong(i)}
-                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left transition-colors ${
-                    removedIndices.has(i)
-                      ? 'bg-red-100 dark:bg-red-900/30 text-red-500 dark:text-red-400'
-                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200'
-                  }`}
-                >
-                  <span className="text-xs font-medium w-4 shrink-0 text-slate-400">{i + 1}.</span>
-                  <span className={`flex-1 text-sm ${removedIndices.has(i) ? 'line-through' : ''}`}>
-                    {song.title}
-                  </span>
-                  {song.key && (
-                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded-md shrink-0 ${
-                      removedIndices.has(i)
-                        ? 'bg-red-200 dark:bg-red-800 text-red-500 dark:text-red-300'
-                        : 'bg-violet-600 text-white'
-                    }`}>
-                      {song.key}
-                    </span>
-                  )}
-                  {removedIndices.has(i) && (
-                    <span className="text-[10px] text-red-400 shrink-0">not performed</span>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleUndo}
-                disabled={isPending || !log.source_session_id}
-                className="flex-1 border border-amber-300 dark:border-amber-600 text-amber-700 dark:text-amber-400 rounded-xl py-2.5 text-sm font-medium hover:bg-amber-100 dark:hover:bg-amber-900/30 disabled:opacity-50 transition-colors"
-              >
-                ↩ Undo
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirm}
-                disabled={isPending}
-                className="flex-1 bg-green-600 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
-              >
-                {isPending
-                  ? 'Saving…'
-                  : `✓ Confirm${removedIndices.size > 0 ? ` (${keptCount} song${keptCount !== 1 ? 's' : ''})` : ''}`}
-              </button>
-            </div>
-          </>
-        )}
+    <div className="border-b border-amber-200 px-4 py-4 last:border-0 dark:border-amber-900/60 sm:px-5">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 items-start gap-3"><Icon name="history" size={17} className="mt-0.5 shrink-0 text-amber-800 dark:text-amber-300" /><div className="min-w-0"><h2 className="break-words text-sm font-semibold text-amber-950 dark:text-amber-100">Review service record: {log.source_session_name}</h2><p className="mt-1 text-xs text-amber-800 dark:text-amber-300">{programDate} · {log.songs.length} song{log.songs.length !== 1 ? 's' : ''}</p></div></div>
+        <button onClick={() => setExpanded((value) => !value)} aria-expanded={expanded} className="button-quiet min-h-8 shrink-0 px-2 text-xs text-amber-900 dark:text-amber-200">{expanded ? 'Collapse' : 'Review'}</button>
       </div>
+      {expanded && <div className="mt-4 pl-7">
+        <p className="mb-2 text-xs text-amber-900 dark:text-amber-200">Select songs that were not performed to remove them from this record.</p>
+        <div className="divide-y divide-amber-100 border-y border-amber-200 dark:divide-amber-900/50 dark:border-amber-900/60">
+          {(log.songs as LogSong[]).map((song, index) => <button key={`${song.title}-${index}`} type="button" aria-pressed={removedIndices.has(index)} onClick={() => toggleSong(index)} className={`grid w-full grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-2 py-2 text-left text-sm ${removedIndices.has(index) ? 'text-rose-700 line-through dark:text-rose-300' : 'text-slate-800 dark:text-slate-100'}`}>
+            <span className="font-mono text-xs text-slate-400">{String(index + 1).padStart(2, '0')}</span><span className="break-words">{song.title}</span><span className="flex items-center gap-2">{song.key && <span className="font-serif font-semibold text-violet-900 dark:text-violet-200">{song.key}</span>}{removedIndices.has(index) && <span className="text-[11px] no-underline">Not performed</span>}</span>
+          </button>)}
+        </div>
+        <div className="mt-3 flex flex-wrap justify-end gap-2">
+          <button type="button" onClick={handleUndo} disabled={isPending || !log.source_session_id} className="button-secondary min-h-9">Undo auto-log</button>
+          <button type="button" onClick={handleConfirm} disabled={isPending} className="button-primary min-h-9"><Icon name="check" size={15} />{isPending ? 'Saving…' : `Confirm${removedIndices.size > 0 ? ` · ${keptCount} songs` : ''}`}</button>
+        </div>
+      </div>}
     </div>
   );
 }
