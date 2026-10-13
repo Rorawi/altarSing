@@ -24,6 +24,7 @@ import {
   addRehearsalSong,
   deleteRehearsalSong,
   updateRehearsalSong,
+  updateSongLeaders,
   reorderSessionItems,
   updateSessionProgramDate,
   setRehearsalSessionClosed,
@@ -31,10 +32,9 @@ import {
   deleteMedleyGroup,
   renameMedleyGroup,
   updateMedleyGroup,
-  updateSongLeaders,
-  applyMedleyLeaderToAllSongs,
   addSongToMedley,
   reorderSongsInMedley,
+  applyMedleyLeaderToAllSongs,
 } from '@/lib/actions';
 import { MUSICAL_KEYS, SERVICE_MOMENTS } from '@/lib/constants';
 import LyricsModal from '@/components/LyricsModal';

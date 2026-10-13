@@ -451,6 +451,20 @@ export async function updateRehearsalSong(
   revalidatePath(`/rehearsal/${sessionId}`);
 }
 
+export async function updateSongLeaders(
+  songId: string,
+  sessionId: string,
+  songLeaders: string[],
+) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('rehearsal_songs')
+    .update({ song_leaders: songLeaders.filter(Boolean) })
+    .eq('id', songId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/rehearsal/${sessionId}`);
+}
+
 export async function reorderRehearsalSongs(sessionId: string, orderedIds: string[]) {
   const supabase = await createClient();
   await Promise.all(
@@ -548,34 +562,6 @@ export async function renameMedleyGroup(id: string, sessionId: string, name: str
   return updateMedleyGroup(id, sessionId, { name });
 }
 
-export async function updateSongLeaders(
-  songId: string,
-  sessionId: string,
-  songLeaders: string[],
-) {
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from('rehearsal_songs')
-    .update({ song_leaders: songLeaders.filter(Boolean) })
-    .eq('id', songId);
-  if (error) throw new Error(error.message);
-  revalidatePath(`/rehearsal/${sessionId}`);
-}
-
-export async function applyMedleyLeaderToAllSongs(
-  medleyGroupId: string,
-  sessionId: string,
-  leaders: string[],
-) {
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from('rehearsal_songs')
-    .update({ song_leaders: leaders.filter(Boolean) })
-    .eq('medley_group_id', medleyGroupId);
-  if (error) throw new Error(error.message);
-  revalidatePath(`/rehearsal/${sessionId}`);
-}
-
 export async function addSongToMedley(
   medleyGroupId: string,
   sessionId: string,
@@ -639,6 +625,20 @@ export async function reorderSongsInMedley(
       supabase.from('rehearsal_songs').update({ position: index + 1 }).eq('id', id),
     ),
   );
+  revalidatePath(`/rehearsal/${sessionId}`);
+}
+
+export async function applyMedleyLeaderToAllSongs(
+  medleyGroupId: string,
+  sessionId: string,
+  leaders: string[],
+) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('rehearsal_songs')
+    .update({ song_leaders: leaders.filter(Boolean) })
+    .eq('medley_group_id', medleyGroupId);
+  if (error) throw new Error(error.message);
   revalidatePath(`/rehearsal/${sessionId}`);
 }
 
