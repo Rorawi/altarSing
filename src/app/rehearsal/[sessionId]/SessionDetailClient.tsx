@@ -30,6 +30,9 @@ import {
   addMedleyGroup,
   deleteMedleyGroup,
   renameMedleyGroup,
+  updateMedleyGroup,
+  updateSongLeaders,
+  applyMedleyLeaderToAllSongs,
   addSongToMedley,
   reorderSongsInMedley,
 } from '@/lib/actions';
@@ -707,12 +710,22 @@ function MedleyGroupCard({
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [editingName, setEditingName] = useState(false);
+  const [editingDetails, setEditingDetails] = useState(false);
+  const [, startTransition] = useTransition();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
   );
+
+  const medleyLeaders =
+    group.leaders && group.leaders.length > 0
+      ? group.leaders
+      : Array.from(new Set(group.songs.flatMap((s) => s.song_leaders || [])));
+
+  const unassignedCount = group.songs.filter(
+    (s) => !s.song_leaders || s.song_leaders.length === 0,
+  ).length;
 
   function handleInnerDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -720,6 +733,14 @@ function MedleyGroupCard({
     const oldIndex = group.songs.findIndex((s) => s.id === active.id);
     const newIndex = group.songs.findIndex((s) => s.id === over.id);
     onSongsReorder(arrayMove(group.songs, oldIndex, newIndex));
+  }
+
+  function handleApplyMedleyLeaderToAll() {
+    if (medleyLeaders.length === 0) return;
+    startTransition(async () => {
+      await applyMedleyLeaderToAllSongs(group.id, sessionId, medleyLeaders);
+      onEdited();
+    });
   }
 
   const lastMedleyKey =
@@ -747,19 +768,37 @@ function MedleyGroupCard({
           {position}
         </span>
         <div className="flex-1 min-w-0">
-          <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest block leading-tight">
-            Medley
-          </span>
-          {editingName ? (
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest block leading-tight">
+              Medley
+            </span>
+            {medleyLeaders.length > 0 && (
+              <span className="text-[11px] font-medium text-amber-800 dark:text-amber-300">
+                · Led by: <span className="font-semibold text-slate-800 dark:text-slate-100">{medleyLeaders.join(', ')}</span>
+              </span>
+            )}
+          </div>
+          {editingDetails ? (
             <span className="text-sm font-semibold leading-snug text-slate-800 dark:text-slate-100">{group.name}</span>
           ) : (
-            <button
-              onClick={() => setEditingName(true)}
-              className="text-sm font-semibold text-slate-800 dark:text-slate-100 hover:text-amber-700 dark:hover:text-amber-300 transition-colors text-left leading-snug"
-              title="Rename medley"
-            >
-              {group.name}
-            </button>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <button
+                onClick={() => setEditingDetails(true)}
+                className="text-sm font-semibold text-slate-800 dark:text-slate-100 hover:text-amber-700 dark:hover:text-amber-300 transition-colors text-left leading-snug"
+                title="Edit medley name & leaders"
+              >
+                {group.name}
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingDetails(true)}
+                className="text-slate-400 hover:text-amber-700 dark:hover:text-amber-300 p-0.5 transition-colors"
+                title="Edit medley name and leaders"
+                aria-label="Edit medley details"
+              >
+                <Icon name="edit" size={13} />
+              </button>
+            </div>
           )}
         </div>
         <span className="text-xs text-amber-600 dark:text-amber-400 shrink-0">
@@ -794,13 +833,13 @@ function MedleyGroupCard({
         </button>
       </div>
 
-      {editingName && (
-        <div className="border-b border-amber-200/80 px-3 py-3 dark:border-amber-800/60">
-          <EditMedleyNameForm
+      {editingDetails && (
+        <div className="border-b border-amber-200/80 px-3 py-3 dark:border-amber-800/60 bg-amber-50/50 dark:bg-amber-950/20">
+          <EditMedleyForm
             group={group}
             sessionId={sessionId}
-            onDone={() => { setEditingName(false); onEdited(); }}
-            onCancel={() => setEditingName(false)}
+            onDone={() => { setEditingDetails(false); onEdited(); }}
+            onCancel={() => setEditingDetails(false)}
           />
         </div>
       )}
@@ -808,6 +847,20 @@ function MedleyGroupCard({
       {/* Expanded content */}
       {!collapsed && (
         <div className="px-3 py-2">
+          {medleyLeaders.length === 1 && unassignedCount > 0 && !editingDetails && (
+            <div className="mb-2 flex items-center justify-between gap-2 rounded-md border border-amber-200/70 bg-amber-100/50 px-2.5 py-1 text-xs text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-200">
+              <span>{unassignedCount} song{unassignedCount > 1 ? 's' : ''} not yet assigned to {medleyLeaders[0]}</span>
+              <button
+                type="button"
+                onClick={handleApplyMedleyLeaderToAll}
+                disabled={isPending}
+                className="font-semibold text-amber-900 underline hover:text-black dark:text-amber-200 dark:hover:text-white"
+              >
+                Assign all to {medleyLeaders[0]}
+              </button>
+            </div>
+          )}
+
           {group.songs.length > 0 && (
             <DndContext
               sensors={sensors}
@@ -845,6 +898,7 @@ function MedleyGroupCard({
                           song={song}
                           position={index + 1}
                           sessionId={sessionId}
+                          medleyLeaders={medleyLeaders}
                           onDelete={onDeleteSong}
                           onEdited={onEdited}
                           isPending={isPending}
@@ -872,6 +926,7 @@ function MedleyGroupCard({
                 medleyGroupId={group.id}
                 sessionId={sessionId}
                 librarySongs={librarySongs}
+                medleyLeaders={medleyLeaders}
                 lastKey={lastMedleyKey}
                 nextPosition={group.songs.length + 1}
                 onAdded={() => { setShowAddForm(false); onEdited(); }}
@@ -893,9 +948,12 @@ function MedleyGroupCard({
         <div className="border-t border-amber-200/70 px-4 py-3 dark:border-amber-800/50">
           <ol className="divide-y divide-amber-200/60 dark:divide-amber-800/40">
             {group.songs.slice(0, 3).map((song, index) => (
-              <li key={song.id} className="grid grid-cols-[2rem_minmax(0,1fr)_2rem] items-baseline gap-2 py-1.5 first:pt-0 last:pb-0">
+              <li key={song.id} className="grid grid-cols-[2rem_minmax(0,1fr)_auto_2.5rem] items-baseline gap-2 py-1.5 first:pt-0 last:pb-0">
                 <span className="font-mono text-[10px] tabular-nums text-amber-700/70 dark:text-amber-400/70">{String(index + 1).padStart(2, '0')}</span>
                 <span className="break-words text-sm font-medium text-slate-700 dark:text-slate-200">{song.song_title}</span>
+                <span className="text-right text-xs font-medium text-amber-800 dark:text-amber-300 truncate max-w-32">
+                  {song.song_leaders && song.song_leaders.length > 0 ? song.song_leaders.join(', ') : '—'}
+                </span>
                 <span className="text-right font-serif text-sm font-semibold text-slate-700 dark:text-slate-200">{song.key_used || '—'}</span>
               </li>
             ))}
@@ -917,6 +975,7 @@ function SortableMedleySongCard(props: {
   song: RehearsalSong;
   position: number;
   sessionId: string;
+  medleyLeaders: string[];
   onDelete: (id: string, title: string) => void;
   onEdited: () => void;
   isPending: boolean;
@@ -945,6 +1004,7 @@ function MedleySongCard({
   song,
   position,
   sessionId,
+  medleyLeaders,
   onDelete,
   onEdited,
   isPending,
@@ -954,6 +1014,7 @@ function MedleySongCard({
   song: RehearsalSong;
   position: number;
   sessionId: string;
+  medleyLeaders: string[];
   onDelete: (id: string, title: string) => void;
   onEdited: () => void;
   isPending: boolean;
@@ -964,8 +1025,11 @@ function MedleySongCard({
   const [editing, setEditing] = useState(false);
   const [lyricsOpen, setLyricsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [assigningSinger, setAssigningSinger] = useState(false);
+  const [, startTransition] = useTransition();
   const menuRef = useRef<HTMLDivElement>(null);
   const hasDetails = song.harmony_notes || song.arrangement_notes;
+  const currentLeaders = song.song_leaders ?? [];
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -977,6 +1041,13 @@ function MedleySongCard({
     if (menuOpen) document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [menuOpen]);
+
+  function handleQuickAssign(newLeaders: string[]) {
+    startTransition(async () => {
+      await updateSongLeaders(song.id, sessionId, newLeaders);
+      onEdited();
+    });
+  }
 
   if (editing) {
     return (
@@ -1058,7 +1129,7 @@ function MedleySongCard({
         </div>
 
         {/* Bottom row: key, run-throughs, leaders, lyrics pill */}
-        <div className="flex items-center gap-x-2 gap-y-1 mt-1 ml-8 flex-wrap text-xs">
+        <div className="flex items-center gap-x-2 gap-y-1.5 mt-1 ml-7 flex-wrap text-xs">
           {song.key_used && (
             <span className="font-semibold tabular-nums text-amber-800 dark:text-amber-300">
               {song.key_used}
@@ -1069,28 +1140,131 @@ function MedleySongCard({
               × {song.run_throughs}
             </span>
           )}
-          {song.song_leaders && song.song_leaders.length > 0 && (
-            <span className="text-slate-500 dark:text-slate-400">
-              Led by: <span className="font-medium text-slate-600 dark:text-slate-300">{song.song_leaders.join(', ')}</span>
-            </span>
+
+          {/* Leaders display / quick assignment */}
+          {currentLeaders.length > 0 ? (
+            <div className="inline-flex items-center gap-1.5 flex-wrap">
+              <span className="text-slate-500 dark:text-slate-400">
+                Led by: <span className="font-medium text-slate-700 dark:text-slate-200">{currentLeaders.join(', ')}</span>
+              </span>
+              {medleyLeaders.length > 1 && (
+                <div className="inline-flex items-center gap-1 ml-0.5">
+                  {medleyLeaders
+                    .filter((l) => !currentLeaders.includes(l))
+                    .map((other) => (
+                      <button
+                        key={other}
+                        type="button"
+                        onClick={() => handleQuickAssign([other])}
+                        disabled={isPending}
+                        className="rounded border border-amber-200/80 bg-amber-50/70 px-1.5 py-0.5 text-[10px] text-amber-800 hover:bg-amber-100 transition-colors dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                        title={`Switch to ${other}`}
+                      >
+                        → {other}
+                      </button>
+                    ))}
+                  {!medleyLeaders.every((l) => currentLeaders.includes(l)) && (
+                    <button
+                      type="button"
+                      onClick={() => handleQuickAssign(medleyLeaders)}
+                      disabled={isPending}
+                      className="rounded border border-amber-200/80 bg-amber-50/70 px-1.5 py-0.5 text-[10px] text-amber-800 hover:bg-amber-100 transition-colors dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                      title="Assign both singers"
+                    >
+                      Both
+                    </button>
+                  )}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setAssigningSinger((v) => !v)}
+                className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline ml-0.5"
+                title="Change singer"
+              >
+                edit
+              </button>
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-1.5 flex-wrap">
+              <span className="text-amber-800/80 dark:text-amber-400/80 font-medium">Singer:</span>
+              {medleyLeaders.map((leader) => (
+                <button
+                  key={leader}
+                  type="button"
+                  onClick={() => handleQuickAssign([leader])}
+                  disabled={isPending}
+                  className="rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[11px] font-medium text-amber-900 hover:bg-amber-100 transition-colors dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-200"
+                  title={`Assign ${leader}`}
+                >
+                  + {leader}
+                </button>
+              ))}
+              {medleyLeaders.length > 1 && (
+                <button
+                  key="both"
+                  type="button"
+                  onClick={() => handleQuickAssign(medleyLeaders)}
+                  disabled={isPending}
+                  className="rounded border border-amber-200 bg-amber-50/50 px-1.5 py-0.5 text-[11px] text-amber-800 hover:bg-amber-100 transition-colors dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300"
+                  title="Assign all medley leaders"
+                >
+                  Both
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setAssigningSinger((v) => !v)}
+                className="rounded border border-dashed border-slate-300 px-1.5 py-0.5 text-[10px] text-slate-500 hover:border-slate-400 hover:text-slate-700 dark:border-slate-700 dark:text-slate-400"
+                title="Pick choir member"
+              >
+                {medleyLeaders.length === 0 ? '+ Assign singer' : '+ other'}
+              </button>
+            </div>
           )}
+
           {song.service_moment && (
             <span className="text-slate-500 dark:text-slate-400">
               {song.service_moment}
             </span>
           )}
+
           {/* Lyrics pill button */}
           <button
             onClick={() => setLyricsOpen(true)}
             className="button-quiet ml-auto min-h-8 shrink-0 px-2 text-xs text-amber-800 dark:text-amber-300"
             title="View lyrics"
           >
-            <><Icon name="lyrics" size={14} />Lyrics</>
+            <Icon name="lyrics" size={14} />Lyrics
           </button>
         </div>
 
+        {/* Inline singer assignment popover/drawer */}
+        {assigningSinger && (
+          <div className="mt-2.5 ml-7 rounded-md border border-amber-200 bg-amber-50/60 p-2.5 dark:border-amber-800 dark:bg-amber-950/20">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Assign singer for &ldquo;{song.song_title}&rdquo;
+              </span>
+              <button
+                type="button"
+                onClick={() => setAssigningSinger(false)}
+                className="text-xs text-slate-400 hover:text-slate-600"
+              >
+                Close
+              </button>
+            </div>
+            <SongLeaderInput
+              values={currentLeaders}
+              onChange={(newLeaders) => {
+                handleQuickAssign(newLeaders);
+              }}
+            />
+          </div>
+        )}
+
         {expanded && hasDetails && (
-          <div className="mt-2 pl-8 space-y-1.5 border-t border-amber-50 dark:border-amber-900/30 pt-2">
+          <div className="mt-2 pl-7 space-y-1.5 border-t border-amber-50 dark:border-amber-900/30 pt-2">
             {song.harmony_notes && (
               <div>
                 <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Harmony</p>
@@ -1117,36 +1291,45 @@ function MedleySongCard({
   );
 }
 
-// ─── Edit Medley Name Form ────────────────────────────────────────────────────
+// ─── Edit Medley Form ─────────────────────────────────────────────────────────
 
-function EditMedleyNameForm({
+function EditMedleyForm({
   group,
   sessionId,
   onDone,
   onCancel,
 }: {
-  group: RehearsalMedleyGroup;
+  group: MedleyData;
   sessionId: string;
   onDone: () => void;
   onCancel: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
   const [name, setName] = useState(group.name);
+  const [leaders, setLeaders] = useState<string[]>(
+    group.leaders && group.leaders.length > 0
+      ? group.leaders
+      : Array.from(new Set(group.songs.flatMap((s) => s.song_leaders || []))),
+  );
+  const [applyToSongs, setApplyToSongs] = useState(false);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
     startTransition(async () => {
-      await renameMedleyGroup(group.id, sessionId, name);
+      await updateMedleyGroup(group.id, sessionId, { name, leaders });
+      if (applyToSongs && leaders.length > 0) {
+        await applyMedleyLeaderToAllSongs(group.id, sessionId, leaders);
+      }
       onDone();
     });
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row sm:items-end">
-      <div className="w-full max-w-2xl">
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <div>
         <label htmlFor={`medley-name-${group.id}`} className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
-          Rename medley
+          Medley name
         </label>
         <input
           id={`medley-name-${group.id}`}
@@ -1158,10 +1341,29 @@ function EditMedleyNameForm({
           className="field-control"
         />
       </div>
-      <div className="flex justify-end gap-2">
+      <div>
+        <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
+          Medley leaders <span className="font-normal text-slate-400">(e.g. 1 or 2 singers)</span>
+        </label>
+        <SongLeaderInput values={leaders} onChange={setLeaders} />
+      </div>
+      {group.songs.length > 0 && leaders.length > 0 && (
+        <label className="flex items-center gap-2 cursor-pointer pt-1">
+          <input
+            type="checkbox"
+            checked={applyToSongs}
+            onChange={(e) => setApplyToSongs(e.target.checked)}
+            className="rounded border-slate-300 text-violet-600 focus:ring-violet-500 dark:border-slate-700 dark:bg-slate-900"
+          />
+          <span className="text-xs text-slate-600 dark:text-slate-300">
+            Apply {leaders.length === 1 ? `"${leaders[0]}"` : 'these leaders'} to all {group.songs.length} song{group.songs.length === 1 ? '' : 's'} in this medley
+          </span>
+        </label>
+      )}
+      <div className="flex justify-end gap-2 pt-1">
         <button type="button" onClick={onCancel} className="button-secondary">Cancel</button>
         <button type="submit" disabled={isPending || !name.trim()} className="button-primary min-w-28">
-          {isPending ? 'Saving…' : 'Save name'}
+          {isPending ? 'Saving…' : 'Save medley'}
         </button>
       </div>
     </form>
@@ -1179,12 +1381,13 @@ function CreateMedleyForm({
 }) {
   const [isPending, startTransition] = useTransition();
   const [name, setName] = useState('');
+  const [leaders, setLeaders] = useState<string[]>([]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
     startTransition(async () => {
-      await addMedleyGroup(sessionId, name);
+      await addMedleyGroup(sessionId, name, leaders);
       onCreated();
     });
   }
@@ -1194,21 +1397,27 @@ function CreateMedleyForm({
       onSubmit={handleSubmit}
       className="space-y-4 rounded-b-md border-t border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-950/30 sm:p-5"
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <div className="min-w-0 flex-1">
-          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
-            New medley
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            autoFocus
-            placeholder="e.g. Praise Medley, Carol Medley…"
-            className="field-control"
-          />
-        </div>
+      <div>
+        <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
+          Medley name
+        </label>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          autoFocus
+          placeholder="e.g. Praise Medley, Carol Medley…"
+          className="field-control"
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
+          Medley leaders <span className="font-normal text-slate-400">(optional — 1 or 2 lead singers)</span>
+        </label>
+        <SongLeaderInput values={leaders} onChange={setLeaders} />
+      </div>
+      <div className="flex justify-end gap-2 pt-1">
         <button
           type="submit"
           disabled={isPending || !name.trim()}
@@ -1670,6 +1879,7 @@ function AddSongToMedleyForm({
   medleyGroupId,
   sessionId,
   librarySongs,
+  medleyLeaders = [],
   lastKey,
   nextPosition,
   onAdded,
@@ -1677,6 +1887,7 @@ function AddSongToMedleyForm({
   medleyGroupId: string;
   sessionId: string;
   librarySongs: LibrarySong[];
+  medleyLeaders?: string[];
   lastKey: string | null;
   nextPosition: number;
   onAdded: () => void;
@@ -1850,6 +2061,34 @@ function AddSongToMedleyForm({
 
       <div>
         <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">Song Leaders <span className="font-normal">(optional)</span></label>
+        {medleyLeaders.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
+            <span className="text-[11px] text-slate-400 dark:text-slate-500">From medley:</span>
+            {medleyLeaders.map((leader) => (
+              <button
+                key={leader}
+                type="button"
+                onClick={() => {
+                  if (!songLeaders.includes(leader)) {
+                    setSongLeaders([...songLeaders, leader]);
+                  }
+                }}
+                className="rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[11px] font-medium text-amber-800 hover:bg-amber-100 transition-colors dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+              >
+                + {leader}
+              </button>
+            ))}
+            {medleyLeaders.length > 1 && (
+              <button
+                type="button"
+                onClick={() => setSongLeaders(medleyLeaders)}
+                className="rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[11px] font-medium text-amber-800 hover:bg-amber-100 transition-colors dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+              >
+                All leaders
+              </button>
+            )}
+          </div>
+        )}
         <SongLeaderInput
           values={songLeaders}
           onChange={setSongLeaders}

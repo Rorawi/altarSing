@@ -106,6 +106,7 @@ export interface RehearsalMedleyGroup {
   session_id: string;
   name: string;
   position: number;
+  leaders?: string[];
   created_at: string;
 }
 
@@ -117,7 +118,7 @@ export interface HarmonyPattern {
 }
 
 export interface RehearsalSessionWithSongs extends RehearsalSession {
-  rehearsal_songs: Pick<RehearsalSong, 'id' | 'song_title' | 'key_used' | 'position' | 'service_moment'>[];
+  rehearsal_songs: Pick<RehearsalSong, 'id' | 'song_title' | 'key_used' | 'position' | 'service_moment' | 'song_leaders'>[];
 }
 
 // ─── COLLECTIONS ─────────────────────────────────────────────────────────────

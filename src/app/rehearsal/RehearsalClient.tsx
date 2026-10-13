@@ -178,7 +178,12 @@ export default function RehearsalClient({
                       <span className="font-mono text-xs tabular-nums text-slate-400">{String(index + 1).padStart(2, '0')}</span>
                       <span className="min-w-0">
                         <span className="block break-words font-serif text-base font-medium text-slate-950 dark:text-slate-100">{song.song_title}</span>
-                        {song.service_moment && <span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">{song.service_moment}</span>}
+                        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-slate-500 dark:text-slate-400">
+                          {song.song_leaders && song.song_leaders.length > 0 && (
+                            <span>Led by: <span className="font-medium text-slate-700 dark:text-slate-300">{song.song_leaders.join(', ')}</span></span>
+                          )}
+                          {song.service_moment && <span>{song.service_moment}</span>}
+                        </div>
                       </span>
                       <span className="text-right font-serif text-lg font-semibold tabular-nums text-slate-900 dark:text-slate-100">{song.key_used || '—'}</span>
                     </div>

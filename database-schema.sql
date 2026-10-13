@@ -268,3 +268,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_collection_songs_unique_song
 
 -- Optional lyrics per collection song entry (used for unlinked/manual songs)
 ALTER TABLE collection_songs ADD COLUMN IF NOT EXISTS lyrics TEXT;
+
+-- =====================================================
+-- Migration: Medley Leaders
+-- Run this AFTER the migrations above
+-- =====================================================
+ALTER TABLE rehearsal_medley_groups ADD COLUMN IF NOT EXISTS leaders TEXT[] NOT NULL DEFAULT '{}';
+

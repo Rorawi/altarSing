@@ -463,7 +463,11 @@ export async function reorderRehearsalSongs(sessionId: string, orderedIds: strin
 
 // ─── MEDLEY GROUPS ────────────────────────────────────────────────────────────
 
-export async function addMedleyGroup(sessionId: string, name: string): Promise<string> {
+export async function addMedleyGroup(
+  sessionId: string,
+  name: string,
+  leaders: string[] = [],
+): Promise<string> {
   const supabase = await createClient();
   const [{ count: songCount }, { count: medleyCount }] = await Promise.all([
     supabase
@@ -477,14 +481,29 @@ export async function addMedleyGroup(sessionId: string, name: string): Promise<s
       .eq('session_id', sessionId),
   ]);
   const position = (songCount ?? 0) + (medleyCount ?? 0) + 1;
-  const { data, error } = await supabase
+  const filteredLeaders = leaders.filter(Boolean);
+
+  let { data, error } = await supabase
     .from('rehearsal_medley_groups')
-    .insert({ session_id: sessionId, name: name.trim(), position })
+    .insert({ session_id: sessionId, name: name.trim(), position, leaders: filteredLeaders })
     .select('id')
     .single();
-  if (error) throw new Error(error.message);
+
+  if (error && error.message.toLowerCase().includes('leaders')) {
+    // Graceful fallback if the column hasn't been added to the database yet
+    const fallback = await supabase
+      .from('rehearsal_medley_groups')
+      .insert({ session_id: sessionId, name: name.trim(), position })
+      .select('id')
+      .single();
+    if (fallback.error) throw new Error(fallback.error.message);
+    data = fallback.data;
+  } else if (error) {
+    throw new Error(error.message);
+  }
+
   revalidatePath(`/rehearsal/${sessionId}`);
-  return data.id;
+  return data!.id;
 }
 
 export async function deleteMedleyGroup(id: string, sessionId: string) {
@@ -494,12 +513,65 @@ export async function deleteMedleyGroup(id: string, sessionId: string) {
   revalidatePath(`/rehearsal/${sessionId}`);
 }
 
-export async function renameMedleyGroup(id: string, sessionId: string, name: string) {
+export async function updateMedleyGroup(
+  id: string,
+  sessionId: string,
+  data: { name: string; leaders?: string[] },
+) {
   const supabase = await createClient();
+  const payload: Record<string, unknown> = {
+    name: data.name.trim(),
+  };
+  if (data.leaders !== undefined) {
+    payload.leaders = data.leaders.filter(Boolean);
+  }
+
   const { error } = await supabase
     .from('rehearsal_medley_groups')
-    .update({ name: name.trim() })
+    .update(payload)
     .eq('id', id);
+
+  if (error && error.message.toLowerCase().includes('leaders')) {
+    const { error: fallbackError } = await supabase
+      .from('rehearsal_medley_groups')
+      .update({ name: data.name.trim() })
+      .eq('id', id);
+    if (fallbackError) throw new Error(fallbackError.message);
+  } else if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath(`/rehearsal/${sessionId}`);
+}
+
+export async function renameMedleyGroup(id: string, sessionId: string, name: string) {
+  return updateMedleyGroup(id, sessionId, { name });
+}
+
+export async function updateSongLeaders(
+  songId: string,
+  sessionId: string,
+  songLeaders: string[],
+) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('rehearsal_songs')
+    .update({ song_leaders: songLeaders.filter(Boolean) })
+    .eq('id', songId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/rehearsal/${sessionId}`);
+}
+
+export async function applyMedleyLeaderToAllSongs(
+  medleyGroupId: string,
+  sessionId: string,
+  leaders: string[],
+) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('rehearsal_songs')
+    .update({ song_leaders: leaders.filter(Boolean) })
+    .eq('medley_group_id', medleyGroupId);
   if (error) throw new Error(error.message);
   revalidatePath(`/rehearsal/${sessionId}`);
 }
