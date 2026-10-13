@@ -998,6 +998,56 @@ function SortableMedleySongCard(props: {
   );
 }
 
+// ─── Inline Singer Panel ──────────────────────────────────────────────────────
+
+function InlineSingerPanel({
+  song,
+  currentLeaders,
+  onSave,
+  onCancel,
+  isPending,
+}: {
+  song: RehearsalSong;
+  sessionId: string;
+  currentLeaders: string[];
+  onSave: (leaders: string[]) => void;
+  onCancel: () => void;
+  isPending: boolean;
+}) {
+  const [localLeaders, setLocalLeaders] = useState<string[]>(currentLeaders);
+  const changed = JSON.stringify(localLeaders) !== JSON.stringify(currentLeaders);
+
+  return (
+    <div className="mt-2.5 ml-7 rounded-md border border-amber-200 bg-amber-50/60 p-2.5 dark:border-amber-800 dark:bg-amber-950/20">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+          Singer for &ldquo;{song.song_title}&rdquo;
+        </span>
+        <button
+          type="button"
+          onPointerDown={(e) => { e.preventDefault(); onCancel(); }}
+          className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+        >
+          Cancel
+        </button>
+      </div>
+      <SongLeaderInput values={localLeaders} onChange={setLocalLeaders} />
+      <button
+        type="button"
+        disabled={isPending}
+        onPointerDown={(e) => { e.preventDefault(); onSave(localLeaders); }}
+        className={`mt-2.5 w-full rounded-md py-2 text-sm font-semibold transition-colors ${
+          changed
+            ? 'bg-violet-600 text-white hover:bg-violet-700 dark:bg-violet-500 dark:hover:bg-violet-600'
+            : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 cursor-default'
+        }`}
+      >
+        {isPending ? 'Saving…' : changed ? 'Save' : 'No changes'}
+      </button>
+    </div>
+  );
+}
+
 // ─── Medley Song Card (inner) ─────────────────────────────────────────────────
 
 function MedleySongCard({
@@ -1241,26 +1291,14 @@ function MedleySongCard({
 
         {/* Inline singer assignment popover/drawer */}
         {assigningSinger && (
-          <div className="mt-2.5 ml-7 rounded-md border border-amber-200 bg-amber-50/60 p-2.5 dark:border-amber-800 dark:bg-amber-950/20">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Assign singer for &ldquo;{song.song_title}&rdquo;
-              </span>
-              <button
-                type="button"
-                onClick={() => setAssigningSinger(false)}
-                className="text-xs text-slate-400 hover:text-slate-600"
-              >
-                Close
-              </button>
-            </div>
-            <SongLeaderInput
-              values={currentLeaders}
-              onChange={(newLeaders) => {
-                handleQuickAssign(newLeaders);
-              }}
-            />
-          </div>
+          <InlineSingerPanel
+            song={song}
+            sessionId={sessionId}
+            currentLeaders={currentLeaders}
+            onSave={(newLeaders) => { handleQuickAssign(newLeaders); setAssigningSinger(false); }}
+            onCancel={() => setAssigningSinger(false)}
+            isPending={isPending}
+          />
         )}
 
         {expanded && hasDetails && (
@@ -1469,10 +1507,6 @@ function SongLeaderInput({
     }
   }
 
-  function commitTypedLeader() {
-    if (inputValue.trim()) addLeader(inputValue);
-  }
-
   return (
     <div className="relative">
       <div className="flex min-h-10 w-full cursor-text flex-wrap items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 focus-within:border-violet-700 focus-within:ring-2 focus-within:ring-violet-700/15 dark:border-slate-700 dark:bg-slate-900">
@@ -1484,7 +1518,7 @@ function SongLeaderInput({
             {v}
             <button
               type="button"
-              onMouseDown={(e) => { e.preventDefault(); removeLeader(v); }}
+              onPointerDown={(e) => { e.preventDefault(); removeLeader(v); }}
               aria-label={`Remove ${v}`}
               className="leading-none text-slate-400 hover:text-slate-700 dark:hover:text-white"
             >
@@ -1497,26 +1531,25 @@ function SongLeaderInput({
           value={inputValue}
           onChange={(e) => { setInputValue(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
-          onBlur={() => {
-            commitTypedLeader();
-            setOpen(false);
-          }}
+          onBlur={() => setOpen(false)}
           onKeyDown={handleKeyDown}
           placeholder={values.length === 0 ? 'Add leader name…' : ''}
           autoComplete="off"
           className="min-w-25 flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100"
         />
-        <button
-          type="button"
-          onMouseDown={(e) => {
-            e.preventDefault();
-            commitTypedLeader();
-          }}
-          className="button-quiet h-7 min-h-7 shrink-0 px-2 text-xs"
-          title="Add typed leader"
-        >
-          +
-        </button>
+        {inputValue.trim() && (
+          <button
+            type="button"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              if (inputValue.trim()) addLeader(inputValue);
+            }}
+            className="button-quiet h-7 min-h-7 shrink-0 px-2 text-xs"
+            title="Add this name"
+          >
+            +
+          </button>
+        )}
       </div>
       {open && filtered.length > 0 && (
         <div className="popover-surface absolute left-0 right-0 z-20 mt-1 max-h-52 overflow-y-auto rounded-md">
@@ -1524,7 +1557,7 @@ function SongLeaderInput({
             <button
               key={m.id}
               type="button"
-              onMouseDown={() => addLeader(m.name)}
+              onPointerDown={(e) => { e.preventDefault(); addLeader(m.name); }}
               className="popover-action border-b border-slate-100 last:border-b-0 dark:border-slate-800"
             >
               {m.name}
@@ -1533,7 +1566,7 @@ function SongLeaderInput({
         </div>
       )}
       <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
-        Pick from choir members or type any name and press Enter.
+        Tap a name from the list, or type and tap + to add.
       </p>
     </div>
   );
