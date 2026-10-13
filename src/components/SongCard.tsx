@@ -8,6 +8,7 @@ import { updateRehearsalStatus, deleteSong } from '@/lib/actions';
 import LyricsModal from '@/components/LyricsModal';
 import Icon from '@/components/Icon';
 import ExternalMediaLink from '@/components/ExternalMediaLink';
+import { parseSubSongItem } from '@/lib/sub-songs';
 
 export default function SongCard({
   song,
@@ -54,7 +55,18 @@ export default function SongCard({
             <Link href={`/library/${song.id}`} className="rounded-sm hover:text-violet-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:hover:text-violet-300">
               {song.title}
             </Link>
+            {song.sub_songs && song.sub_songs.length > 0 && (
+              <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
+                Medley ({song.sub_songs.length})
+              </span>
+            )}
           </h3>
+          {song.sub_songs && song.sub_songs.length > 0 && (
+            <p className="mt-1 line-clamp-1 text-xs text-amber-800/90 dark:text-amber-300/90">
+              <span className="font-semibold text-amber-900/70 dark:text-amber-400/70">Songs:</span>{' '}
+              {song.sub_songs.map(parseSubSongItem).map((s) => s.title).filter(Boolean).join(' → ')}
+            </p>
+          )}
           {song.notes && <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{song.notes}</p>}
           {song.youtube_link && <ExternalMediaLink href={song.youtube_link} className="mt-1" />}
         </div>
@@ -82,7 +94,12 @@ export default function SongCard({
 
         <div className="flex items-center justify-end gap-1 border-t border-slate-100 pt-2 lg:border-0 lg:pt-0">
           {onAddToCollection && <button onClick={onAddToCollection} className="button-quiet min-h-8 px-2 text-xs" title="Add to a collection" aria-label={`Add ${song.title} to a collection`}><Icon name="plus" size={15} /><span className="lg:hidden 2xl:inline">Collection</span></button>}
-          {song.lyrics && <button onClick={() => setLyricsOpen(true)} className="button-quiet min-h-8 px-2 text-xs" title="View lyrics"><Icon name="lyrics" size={15} /><span className="lg:hidden 2xl:inline">Lyrics</span></button>}
+          {(song.lyrics || (song.sub_songs && song.sub_songs.length > 0)) && (
+            <button onClick={() => setLyricsOpen(true)} className="button-quiet min-h-8 px-2 text-xs" title="View lyrics">
+              <Icon name="lyrics" size={15} />
+              <span className="lg:hidden 2xl:inline">Lyrics</span>
+            </button>
+          )}
           <Link href={`/library/${song.id}`} className="icon-button h-8 w-8" title="Edit song" aria-label={`Edit ${song.title}`}><Icon name="edit" size={15} /></Link>
           <button onClick={() => setShowDeleteConfirm((value) => !value)} className="icon-button h-8 w-8 hover:text-red-700 dark:hover:text-red-300" title="Delete song" aria-label={`Delete ${song.title}`}><Icon name="trash" size={15} /></button>
         </div>
@@ -105,6 +122,7 @@ export default function SongCard({
         songId={song.id}
         initialLyrics={song.lyrics}
         youtubeLink={song.youtube_link}
+        subSongs={song.sub_songs}
       />
     </article>
   );

@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation';
 import type { Song } from '@/types';
 import SongForm from '@/components/SongForm';
 import { updateSong } from '@/lib/actions';
+import PageHeader from '@/components/PageHeader';
+import Icon from '@/components/Icon';
 
 export default function EditSongClient({ song }: { song: Song }) {
   const router = useRouter();
@@ -15,24 +17,25 @@ export default function EditSongClient({ song }: { song: Song }) {
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-6">
-        <button
-          onClick={() => router.back()}
-          className="text-slate-400 hover:text-slate-600 transition-colors p-1 -ml-1"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-slate-900">Edit Song</h1>
-          <p className="text-sm text-slate-500 truncate">{song.title}</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Edit Song"
+        description={song.title}
+        actions={
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="button-quiet"
+          >
+            <Icon name="arrow-left" size={16} />
+            Back
+          </button>
+        }
+      />
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+      <div className="max-w-3xl rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 sm:p-7">
         <SongForm initialData={song} onSubmit={handleSubmit} submitLabel="Save Changes" />
       </div>
     </div>
   );
 }
+

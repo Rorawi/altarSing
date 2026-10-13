@@ -14,6 +14,15 @@ import { getYouTubeId, useYouTubePlayer } from '@/lib/youtube-player-context';
 import ExternalMediaLink from '@/components/ExternalMediaLink';
 import Icon from '@/components/Icon';
 
+import { parseSubSongItem, type SubSongItem } from '@/lib/sub-songs';
+
+export interface MedleySongLyricsItem {
+  id?: string;
+  title: string;
+  lyrics?: string | null;
+  key?: string | null;
+}
+
 interface LyricsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -28,6 +37,10 @@ interface LyricsModalProps {
   initialLyrics?: string | null;
   /** Optional pre-loaded youtube link. */
   youtubeLink?: string | null;
+  /** Optional sub-songs / subsections for a medley recording */
+  subSongs?: Array<{ title: string; lyrics?: string }> | string[];
+  /** Optional array of songs if viewing lyrics for an entire rehearsal medley group */
+  medleySongs?: MedleySongLyricsItem[];
 }
 
 function escapeHtml(text: string) {
@@ -122,10 +135,15 @@ export default function LyricsModal({
   collectionSongId,
   initialLyrics,
   youtubeLink: youtubeLinkProp,
+  subSongs,
+  medleySongs,
 }: LyricsModalProps) {
   const [lyrics, setLyrics] = useState<string | null>(null);
   const [youtubeLink, setYoutubeLink] = useState<string | null>(null);
   const [fetchingLink, setFetchingLink] = useState(false);
+
+  const parsedSubSongs = (subSongs || []).map(parseSubSongItem);
+  const isMedley = (medleySongs && medleySongs.length > 0) || (parsedSubSongs.length > 0);
 
   const {
     activeSong,
@@ -347,9 +365,19 @@ export default function LyricsModal({
   }, [isOpen, songId, rehearsalSongId, collectionSongId, initialLyrics]);
 
   async function handleCopy() {
-    if (!lyrics) return;
+    let textToCopy = lyrics || '';
+    if (medleySongs && medleySongs.length > 0) {
+      textToCopy = medleySongs
+        .map((s, i) => `## ${i + 1}. ${s.title}${s.key ? ` (Key: ${s.key})` : ''}\n\n${s.lyrics?.trim() || '[No lyrics]'}`)
+        .join('\n\n---\n\n');
+    } else if (parsedSubSongs && parsedSubSongs.length > 0) {
+      textToCopy = parsedSubSongs
+        .map((s, i) => `## ${i + 1}. ${s.title}\n\n${s.lyrics?.trim() || '[No lyrics]'}`)
+        .join('\n\n---\n\n');
+    }
+    if (!textToCopy) return;
     try {
-      await navigator.clipboard.writeText(lyrics);
+      await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch {
@@ -395,7 +423,7 @@ export default function LyricsModal({
         <div className="px-5 pt-5 pb-3 border-b border-slate-100 dark:border-slate-800 flex items-start gap-3 shrink-0">
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-0.5">
-              Lyrics
+              {isMedley ? 'Medley Lyrics' : 'Lyrics'}
             </p>
             <p id="lyrics-dialog-title" className="break-words font-serif font-semibold text-slate-950 dark:text-slate-100 text-base leading-snug">
               {songTitle}
@@ -412,12 +440,12 @@ export default function LyricsModal({
               </button>
             )}
             {youtubeLink && !canPlayOnYouTube && !editing && <ExternalMediaLink href={youtubeLink} />}
-            {!youtubeLink && !loading && !editing && (
+            {!youtubeLink && !loading && !editing && !isMedley && (
               <span className="text-xs text-slate-400 dark:text-slate-500">
                 No reference link
               </span>
             )}
-            {lyrics && !editing && (
+            {(lyrics || isMedley) && !editing && (
               <button
                 onClick={handleCopy}
                 className={`min-h-8 px-2.5 text-xs font-medium transition-colors ${
@@ -426,7 +454,7 @@ export default function LyricsModal({
                     : 'button-secondary'
                 }`}
               >
-                {copied ? 'Copied' : 'Copy lyrics'}
+                {copied ? 'Copied' : isMedley ? 'Copy all lyrics' : 'Copy lyrics'}
               </button>
             )}
             <button
@@ -570,6 +598,81 @@ export default function LyricsModal({
                   ) : (
                     <p className="text-xs text-slate-400 dark:text-slate-500">Start typing to preview formatted lyrics.</p>
                   )}
+                </div>
+              )}
+            </div>
+          ) : medleySongs && medleySongs.length > 0 ? (
+            <div className="space-y-4">
+              <p className="text-xs text-amber-800 dark:text-amber-300 font-medium">
+                {medleySongs.length} songs in this medley
+              </p>
+              <div className="space-y-4">
+                {medleySongs.map((song, i) => (
+                  <div
+                    key={song.id || i}
+                    className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-4 shadow-sm"
+                  >
+                    <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-semibold text-amber-600 dark:text-amber-400">
+                          {i + 1}.
+                        </span>
+                        <h4 className="font-serif font-semibold text-slate-900 dark:text-slate-100 text-sm">
+                          {song.title}
+                        </h4>
+                      </div>
+                      {song.key && (
+                        <span className="text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                          Key: {song.key}
+                        </span>
+                      )}
+                    </div>
+                    {song.lyrics?.trim() ? (
+                      <RenderFormattedLyrics text={song.lyrics} />
+                    ) : (
+                      <p className="text-xs italic text-slate-400 dark:text-slate-500 py-1">
+                        No lyrics added yet for this song
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : parsedSubSongs && parsedSubSongs.length > 0 ? (
+            <div className="space-y-4">
+              <p className="text-xs text-amber-800 dark:text-amber-300 font-medium">
+                {parsedSubSongs.length} songs in this medley
+              </p>
+              <div className="space-y-4">
+                {parsedSubSongs.map((sub, i) => (
+                  <div
+                    key={i}
+                    className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-4 shadow-sm"
+                  >
+                    <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2 mb-3">
+                      <span className="font-mono text-xs font-semibold text-amber-600 dark:text-amber-400">
+                        {i + 1}.
+                      </span>
+                      <h4 className="font-serif font-semibold text-slate-900 dark:text-slate-100 text-sm">
+                        {sub.title}
+                      </h4>
+                    </div>
+                    {sub.lyrics?.trim() ? (
+                      <RenderFormattedLyrics text={sub.lyrics} />
+                    ) : (
+                      <p className="text-xs italic text-slate-400 dark:text-slate-500 py-1">
+                        No lyrics added yet for this song
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {lyrics && (
+                <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
+                  <p className="text-xs uppercase font-semibold text-slate-400 dark:text-slate-500 mb-2">
+                    Additional Arrangement Lyrics
+                  </p>
+                  <RenderFormattedLyrics text={lyrics} />
                 </div>
               )}
             </div>

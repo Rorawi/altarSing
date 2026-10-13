@@ -275,3 +275,13 @@ ALTER TABLE collection_songs ADD COLUMN IF NOT EXISTS lyrics TEXT;
 -- =====================================================
 ALTER TABLE rehearsal_medley_groups ADD COLUMN IF NOT EXISTS leaders TEXT[] NOT NULL DEFAULT '{}';
 
+-- =====================================================
+-- Migration: Sub-songs tracklist
+-- Allows a single rehearsal song or library song to
+-- carry an ordered list of song titles (e.g. a YouTube
+-- medley where you want to note all songs within it).
+-- Run this AFTER the migrations above
+-- =====================================================
+ALTER TABLE rehearsal_songs ADD COLUMN IF NOT EXISTS sub_songs TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE songs           ADD COLUMN IF NOT EXISTS sub_songs TEXT[] NOT NULL DEFAULT '{}';
+NOTIFY pgrst, 'reload schema';

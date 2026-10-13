@@ -9,6 +9,7 @@ export interface Song {
   tempo: string | null;
   notes: string | null;
   lyrics: string | null;
+  sub_songs: string[];
   rehearsal_status: RehearsalStatus;
   created_at: string;
 }
@@ -96,6 +97,7 @@ export interface RehearsalSong {
   lyrics: string | null;
   run_throughs: number;
   song_leaders: string[];
+  sub_songs: string[];
   medley_group_id: string | null;
   service_moment: string | null;
   created_at: string;

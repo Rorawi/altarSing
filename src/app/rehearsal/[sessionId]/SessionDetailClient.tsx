@@ -39,10 +39,15 @@ import {
 import { MUSICAL_KEYS, SERVICE_MOMENTS } from '@/lib/constants';
 import LyricsModal from '@/components/LyricsModal';
 import Icon from '@/components/Icon';
+import {
+  parseSubSongItem,
+  serializeSubSongItem,
+  type SubSongItem,
+} from '@/lib/sub-songs';
 
 // ─── Types & Helpers ──────────────────────────────────────────────────────────
 
-type LibrarySong = { id: string; title: string; musical_key: string | null };
+type LibrarySong = { id: string; title: string; musical_key: string | null; sub_songs?: string[] };
 type MedleyData = RehearsalMedleyGroup & { songs: RehearsalSong[] };
 type SessionItem =
   | { itemType: 'song'; id: string; position: number; data: RehearsalSong }
@@ -528,7 +533,7 @@ function StandaloneSongCard({
   const [lyricsOpen, setLyricsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const hasDetails = song.harmony_notes || song.arrangement_notes;
+  const hasDetails = !!(song.harmony_notes || song.arrangement_notes || (song.sub_songs && song.sub_songs.length > 0));
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -576,6 +581,11 @@ function StandaloneSongCard({
           </span>
           <p className="font-serif font-medium text-slate-950 dark:text-slate-100 text-base leading-snug flex-1 min-w-0 break-words">
             {song.song_title}
+            {song.sub_songs && song.sub_songs.length > 0 && (
+              <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
+                Medley
+              </span>
+            )}
           </p>
           <span className="min-w-8 shrink-0 text-right font-serif text-lg font-semibold tabular-nums text-slate-900 dark:text-slate-100">
             {song.key_used || '—'}
@@ -638,6 +648,16 @@ function StandaloneSongCard({
               Led by: <span className="font-medium text-slate-600 dark:text-slate-300">{song.song_leaders.join(', ')}</span>
             </span>
           )}
+          {song.sub_songs && song.sub_songs.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-900/40 transition-colors"
+            >
+              <span>{song.sub_songs.length} songs</span>
+              <span className="text-[10px] text-amber-600 dark:text-amber-400">{expanded ? '▲' : '▼'}</span>
+            </button>
+          )}
           {song.service_moment && (
             <span className="text-slate-500 dark:text-slate-400">
               {song.service_moment}
@@ -655,6 +675,36 @@ function StandaloneSongCard({
 
         {expanded && hasDetails && (
           <div className="mt-3 pl-10 space-y-2 border-t border-slate-100 dark:border-slate-700 pt-3">
+            {song.sub_songs && song.sub_songs.length > 0 && (
+              <div>
+                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">Songs in this medley</p>
+                <div className="space-y-2">
+                  {song.sub_songs.map((raw, i) => {
+                    const sub = parseSubSongItem(raw);
+                    return (
+                      <div key={i} className="rounded-md border border-amber-200/60 bg-amber-50/50 p-2 dark:border-amber-800/60 dark:bg-amber-950/20">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                            <span className="font-mono text-[10px] text-amber-600 dark:text-amber-400 mr-1.5">{i + 1}.</span>
+                            {sub.title}
+                          </span>
+                          {sub.lyrics?.trim() && (
+                            <span className="text-[10px] text-amber-800 dark:text-amber-300 font-medium bg-amber-100/70 dark:bg-amber-900/40 px-1.5 py-0.5 rounded">
+                              Lyrics
+                            </span>
+                          )}
+                        </div>
+                        {sub.lyrics?.trim() && (
+                          <p className="mt-1.5 whitespace-pre-wrap text-xs text-slate-600 dark:text-slate-300 pl-3 border-l-2 border-amber-300 dark:border-amber-700 font-sans leading-relaxed">
+                            {sub.lyrics}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             {song.harmony_notes && (
               <div>
                 <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Harmony</p>
@@ -676,6 +726,7 @@ function StandaloneSongCard({
         songTitle={song.song_title}
         songId={song.song_id}
         rehearsalSongId={song.id}
+        subSongs={song.sub_songs}
       />
     </div>
   );
@@ -709,6 +760,7 @@ function MedleyGroupCard({
   dragAttributes?: object;
 }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [medleyLyricsOpen, setMedleyLyricsOpen] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingDetails, setEditingDetails] = useState(false);
   const [, startTransition] = useTransition();
@@ -804,6 +856,15 @@ function MedleyGroupCard({
         <span className="text-xs text-amber-600 dark:text-amber-400 shrink-0">
           {group.songs.length} song{group.songs.length !== 1 ? 's' : ''}
         </span>
+        <button
+          type="button"
+          onClick={() => setMedleyLyricsOpen(true)}
+          className="button-quiet min-h-11 shrink-0 gap-1 px-2 text-xs text-amber-800 dark:text-amber-300"
+          title="View medley lyrics"
+        >
+          <Icon name="lyrics" size={14} />
+          <span>Lyrics</span>
+        </button>
         <button
           type="button"
           onClick={() => setCollapsed((v) => !v)}
@@ -965,6 +1026,18 @@ function MedleyGroupCard({
           )}
         </div>
       )}
+
+      <LyricsModal
+        isOpen={medleyLyricsOpen}
+        onClose={() => setMedleyLyricsOpen(false)}
+        songTitle={group.name}
+        medleySongs={group.songs.map((s) => ({
+          id: s.id,
+          title: s.song_title,
+          lyrics: s.lyrics,
+          key: s.key_used,
+        }))}
+      />
     </div>
   );
 }
@@ -1572,6 +1645,161 @@ function SongLeaderInput({
   );
 }
 
+// ─── Sub-Songs (Tracklist) Input ──────────────────────────────────────────────
+
+function SubSongsInput({
+  values,
+  onChange,
+}: {
+  values: string[];
+  onChange: (vals: string[]) => void;
+}) {
+  const items: SubSongItem[] = values.map(parseSubSongItem);
+  const [newTitle, setNewTitle] = useState('');
+  const [newLyrics, setNewLyrics] = useState('');
+  const [showLyrics, setShowLyrics] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+
+  function addSong() {
+    const trimmedTitle = newTitle.trim();
+    if (!trimmedTitle) return;
+    const newItem: SubSongItem = {
+      title: trimmedTitle,
+      lyrics: newLyrics.trim(),
+    };
+    onChange([...values, serializeSubSongItem(newItem)]);
+    setNewTitle('');
+    setNewLyrics('');
+    setShowLyrics(false);
+  }
+
+  function removeSong(index: number) {
+    onChange(values.filter((_, i) => i !== index));
+    if (editingIndex === index) setEditingIndex(null);
+  }
+
+  function updateSongLyrics(index: number, lyricsText: string) {
+    const nextItems = items.map((item, i) =>
+      i === index ? { ...item, lyrics: lyricsText } : item,
+    );
+    onChange(nextItems.map(serializeSubSongItem));
+  }
+
+  return (
+    <div className="space-y-2">
+      {items.length > 0 && (
+        <ol className="space-y-2">
+          {items.map((sub, i) => {
+            const isEditing = editingIndex === i;
+            return (
+              <li
+                key={i}
+                className="rounded-md border border-amber-200 bg-amber-50/70 p-2 dark:border-amber-800/60 dark:bg-amber-950/20"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="shrink-0 font-mono text-[10px] tabular-nums text-amber-600 dark:text-amber-400 w-4 text-right">
+                    {i + 1}.
+                  </span>
+                  <span className="flex-1 text-xs font-semibold text-slate-800 dark:text-slate-200">
+                    {sub.title}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setEditingIndex(isEditing ? null : i)}
+                    className="button-quiet text-xs py-0.5 px-2 text-amber-700 dark:text-amber-400"
+                  >
+                    {sub.lyrics?.trim()
+                      ? isEditing ? 'Hide lyrics' : 'Lyrics ✓'
+                      : isEditing ? 'Cancel' : '+ Lyrics'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeSong(i)}
+                    aria-label={`Remove ${sub.title}`}
+                    className="shrink-0 text-slate-400 hover:text-red-500 transition-colors leading-none text-base px-1"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                {isEditing && (
+                  <div className="mt-2 pl-6">
+                    <textarea
+                      value={sub.lyrics || ''}
+                      onChange={(e) => updateSongLyrics(i, e.target.value)}
+                      rows={3}
+                      placeholder="Lyrics for this subsection…"
+                      className="field-control text-xs resize-y font-mono"
+                    />
+                  </div>
+                )}
+
+                {!isEditing && sub.lyrics?.trim() && (
+                  <p className="mt-1 pl-6 text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 italic">
+                    "{sub.lyrics.trim().split('\n')[0]}"
+                  </p>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      )}
+
+      {/* Input box */}
+      <div className="rounded-md border border-slate-200 bg-slate-50/50 p-2 dark:border-slate-800 dark:bg-slate-900/40 space-y-2">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addSong();
+              }
+            }}
+            placeholder="Song title in medley…"
+            autoComplete="off"
+            className="field-control flex-1 text-sm"
+          />
+          <button
+            type="button"
+            onClick={addSong}
+            disabled={!newTitle.trim()}
+            className="button-secondary shrink-0 px-3 disabled:opacity-40"
+            title="Add song to tracklist"
+          >
+            + Add
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setShowLyrics((v) => !v)}
+            className="text-xs text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-1 font-medium"
+          >
+            {showLyrics ? '− Remove lyrics input' : '+ Attach lyrics to this song'}
+          </button>
+          <span className="text-[11px] text-slate-400 dark:text-slate-500">
+            Optional
+          </span>
+        </div>
+
+        {showLyrics && (
+          <textarea
+            value={newLyrics}
+            onChange={(e) => setNewLyrics(e.target.value)}
+            rows={3}
+            placeholder="Type or paste lyrics for this specific song…"
+            className="field-control text-xs resize-y font-mono"
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Inline Edit Song Form ────────────────────────────────────────────────────
 
 function EditSongForm({
@@ -1593,6 +1821,7 @@ function EditSongForm({
   const [arrangementNotes, setArrangementNotes] = useState(song.arrangement_notes ?? '');
   const [serviceMoment, setServiceMoment] = useState(song.service_moment ?? '');
   const [songLeaders, setSongLeaders] = useState<string[]>(song.song_leaders ?? []);
+  const [subSongs, setSubSongs] = useState<string[]>(song.sub_songs ?? []);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -1606,6 +1835,7 @@ function EditSongForm({
         arrangement_notes: arrangementNotes.trim() || null,
         service_moment: serviceMoment || null,
         song_leaders: songLeaders,
+        sub_songs: subSongs,
       });
       onDone();
     });
@@ -1683,6 +1913,12 @@ function EditSongForm({
           <SongLeaderInput values={songLeaders} onChange={setSongLeaders} />
         </div>
       </div>
+      <div>
+        <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">
+          Songs in this medley <span className="font-normal text-slate-400">(optional — list individual songs if this is a medley recording)</span>
+        </label>
+        <SubSongsInput values={subSongs} onChange={setSubSongs} />
+      </div>
       <div className="flex justify-end gap-2 border-t border-slate-200 pt-3 dark:border-slate-800">
         <button type="button" onClick={onCancel} className="button-secondary">Cancel</button>
         <button type="submit" disabled={isPending || !title.trim()} className="button-primary min-w-24">
@@ -1717,6 +1953,7 @@ function AddSongForm({
   const [arrangementNotes, setArrangementNotes] = useState('');
   const [serviceMoment, setServiceMoment] = useState('');
   const [songLeaders, setSongLeaders] = useState<string[]>([]);
+  const [subSongs, setSubSongs] = useState<string[]>([]);
   const [collectionFilter, setCollectionFilter] = useState('');
 
   const collections = useContext(CollectionsContext);
@@ -1738,6 +1975,9 @@ function AddSongForm({
     setSelectedSong(song);
     setLibrarySearch(song.title);
     if (song.musical_key && !keyUsed) setKeyUsed(song.musical_key);
+    if (song.sub_songs && song.sub_songs.length > 0 && subSongs.length === 0) {
+      setSubSongs(song.sub_songs);
+    }
   }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -1757,6 +1997,7 @@ function AddSongForm({
         run_throughs: runThroughs,
         service_moment: serviceMoment || null,
         song_leaders: songLeaders,
+        sub_songs: subSongs,
       });
       onAdded();
     });
@@ -1895,6 +2136,13 @@ function AddSongForm({
           values={songLeaders}
           onChange={setSongLeaders}
         />
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+          Songs in this medley <span className="text-slate-400 font-normal">(optional)</span>
+        </label>
+        <SubSongsInput values={subSongs} onChange={setSubSongs} />
       </div>
 
       <button type="submit"

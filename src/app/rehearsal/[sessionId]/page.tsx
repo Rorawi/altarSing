@@ -22,7 +22,7 @@ export default async function SessionDetailPage({
     supabase.from('rehearsal_sessions').select('*').eq('id', sessionId).single(),
     supabase.from('rehearsal_songs').select('*').eq('session_id', sessionId).order('position'),
     supabase.from('rehearsal_medley_groups').select('*').eq('session_id', sessionId).order('position'),
-    supabase.from('songs').select('id, title, musical_key').order('title'),
+    supabase.from('songs').select('id, title, musical_key, sub_songs').order('title'),
     supabase.from('choir_members').select('id, name').order('name'),
     supabase
       .from('collections')

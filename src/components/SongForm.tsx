@@ -4,6 +4,12 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { SONG_CATEGORIES, MUSICAL_KEYS, TEMPOS } from '@/lib/constants';
 import type { Song } from '@/types';
+import {
+  parseSubSongItem,
+  serializeSubSongItem,
+  formatSubSongsLyrics,
+  type SubSongItem,
+} from '@/lib/sub-songs';
 
 interface SongFormProps {
   initialData?: Partial<Song>;
@@ -27,6 +33,13 @@ export default function SongForm({
   );
   const [selectedCategories, setSelectedCategories] = useState<string[]>(initSelected);
   const [otherText, setOtherText] = useState<string>(initOther);
+  const [subSongs, setSubSongs] = useState<SubSongItem[]>(
+    (initialData?.sub_songs ?? []).map(parseSubSongItem),
+  );
+  const [newSubTitle, setNewSubTitle] = useState('');
+  const [newSubLyrics, setNewSubLyrics] = useState('');
+  const [showSubLyrics, setShowSubLyrics] = useState(false);
+  const [editingSubIndex, setEditingSubIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   function toggleCategory(cat: string) {
@@ -43,6 +56,12 @@ export default function SongForm({
     selectedCategories.forEach((cat) =>
       formData.append('categories', cat === 'Other' ? (otherText.trim() || 'Other') : cat),
     );
+    // Encode sub_songs as JSON array string
+    formData.set('sub_songs', JSON.stringify(subSongs.map(serializeSubSongItem)));
+    const mainLyrics = (formData.get('lyrics') as string)?.trim();
+    if (!mainLyrics && subSongs.some((s) => s.lyrics?.trim())) {
+      formData.set('lyrics', formatSubSongsLyrics(subSongs));
+    }
 
     startTransition(async () => {
       try {
@@ -57,7 +76,7 @@ export default function SongForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm dark:bg-red-950/40 dark:border-red-900 dark:text-red-300">
           {error}
         </div>
       )}
@@ -104,8 +123,8 @@ export default function SongForm({
                 onClick={() => toggleCategory(cat)}
                 className={`min-h-9 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
                   selected
-                    ? 'border-violet-800 bg-violet-50 text-violet-950 dark:border-violet-400 dark:bg-violet-950/40 dark:text-violet-100'
-                    : 'border-slate-300 bg-white text-slate-600 hover:border-violet-500 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:text-white'
+                    ? 'border-violet-700 bg-violet-600 text-white font-semibold dark:border-violet-500 dark:bg-violet-600 dark:text-white shadow-sm'
+                    : 'border-slate-300 bg-white text-slate-700 hover:border-violet-500 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:text-white'
                 }`}
               >
                 {cat}
@@ -197,6 +216,143 @@ export default function SongForm({
         />
       </div>
 
+      {/* Sub-songs tracklist */}
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+          Songs in this medley{' '}
+          <span className="text-slate-400 dark:text-slate-500 font-normal text-xs">(optional — list each song and optionally its lyrics)</span>
+        </label>
+
+        {subSongs.length > 0 && (
+          <ol className="mb-3 space-y-2">
+            {subSongs.map((sub, i) => {
+              const isEditing = editingSubIndex === i;
+              return (
+                <li
+                  key={i}
+                  className="rounded-lg border border-amber-200 bg-amber-50/70 p-2.5 dark:border-amber-800/60 dark:bg-amber-950/20"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="shrink-0 font-mono text-[10px] tabular-nums text-amber-600 dark:text-amber-400 w-4 text-right">
+                      {i + 1}.
+                    </span>
+                    <span className="flex-1 text-xs font-semibold text-slate-800 dark:text-slate-200">
+                      {sub.title}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setEditingSubIndex(isEditing ? null : i)}
+                      className="button-quiet text-xs py-0.5 px-2 text-amber-700 dark:text-amber-400"
+                    >
+                      {sub.lyrics?.trim()
+                        ? isEditing ? 'Hide lyrics' : 'Lyrics ✓'
+                        : isEditing ? 'Cancel' : '+ Add lyrics'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSubSongs(subSongs.filter((_, j) => j !== i));
+                        if (editingSubIndex === i) setEditingSubIndex(null);
+                      }}
+                      aria-label={`Remove ${sub.title}`}
+                      className="shrink-0 text-slate-400 hover:text-red-500 transition-colors leading-none text-base px-1"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  {isEditing && (
+                    <div className="mt-2 pl-6 space-y-1.5">
+                      <textarea
+                        value={sub.lyrics || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setSubSongs(
+                            subSongs.map((s, idx) => (idx === i ? { ...s, lyrics: val } : s)),
+                          );
+                        }}
+                        rows={3}
+                        placeholder="Lyrics for this subsection…"
+                        className="field-control text-xs resize-y font-mono"
+                      />
+                    </div>
+                  )}
+
+                  {!isEditing && sub.lyrics?.trim() && (
+                    <p className="mt-1 pl-6 text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 italic">
+                      "{sub.lyrics.trim().split('\n')[0]}"
+                    </p>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        )}
+
+        {/* Add new sub-song input box */}
+        <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-2.5 dark:border-slate-800 dark:bg-slate-900/40 space-y-2">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newSubTitle}
+              onChange={(e) => setNewSubTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  if (newSubTitle.trim()) {
+                    setSubSongs([...subSongs, { title: newSubTitle.trim(), lyrics: newSubLyrics.trim() }]);
+                    setNewSubTitle('');
+                    setNewSubLyrics('');
+                    setShowSubLyrics(false);
+                  }
+                }
+              }}
+              placeholder="Song title in medley…"
+              autoComplete="off"
+              className="field-control flex-1 text-sm"
+            />
+            <button
+              type="button"
+              disabled={!newSubTitle.trim()}
+              onClick={() => {
+                if (newSubTitle.trim()) {
+                  setSubSongs([...subSongs, { title: newSubTitle.trim(), lyrics: newSubLyrics.trim() }]);
+                  setNewSubTitle('');
+                  setNewSubLyrics('');
+                  setShowSubLyrics(false);
+                }
+              }}
+              className="button-secondary shrink-0 px-3.5 disabled:opacity-40"
+            >
+              + Add
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setShowSubLyrics((v) => !v)}
+              className="text-xs text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-1 font-medium"
+            >
+              {showSubLyrics ? '− Remove lyrics input' : '+ Attach lyrics to this song'}
+            </button>
+            <span className="text-[11px] text-slate-400 dark:text-slate-500">
+              Optional
+            </span>
+          </div>
+
+          {showSubLyrics && (
+            <textarea
+              value={newSubLyrics}
+              onChange={(e) => setNewSubLyrics(e.target.value)}
+              rows={3}
+              placeholder="Type or paste lyrics for this specific song…"
+              className="field-control text-xs resize-y font-mono"
+            />
+          )}
+        </div>
+      </div>
+
       {/* Lyrics */}
       <div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
@@ -213,7 +369,7 @@ export default function SongForm({
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3 pt-1">
+      <div className="flex gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
         <button
           type="button"
           onClick={() => router.back()}

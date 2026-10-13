@@ -22,7 +22,7 @@ export default function NewSongPage() {
         actions={<button onClick={() => router.back()} className="button-quiet"><Icon name="arrow-left" size={16} />Back</button>}
       />
 
-      <div className="max-w-3xl border-b border-slate-200 pb-6 dark:border-slate-800">
+      <div className="max-w-3xl rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/60 sm:p-7">
         <SongForm onSubmit={handleSubmit} submitLabel="Add to Library" />
       </div>
     </div>

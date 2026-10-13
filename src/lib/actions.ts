@@ -2,11 +2,39 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
+import { parseSubSongItem, formatSubSongsLyrics } from '@/lib/sub-songs';
 
 // ─── SONGS ────────────────────────────────────────────────────────────────────
 
+function parseSubSongsFromInput(raw: unknown): string[] {
+  if (!raw || typeof raw !== 'string') return [];
+  const trimmed = raw.trim();
+  if (!trimmed) return [];
+  if (trimmed.startsWith('[')) {
+    try {
+      const arr = JSON.parse(trimmed);
+      if (Array.isArray(arr)) {
+        return arr.map((item) =>
+          typeof item === 'string' ? item : JSON.stringify(item),
+        );
+      }
+    } catch {}
+  }
+  return trimmed.split('||').map((s) => s.trim()).filter(Boolean);
+}
+
 export async function addSong(formData: FormData) {
   const supabase = await createClient();
+
+  const subSongs = parseSubSongsFromInput(formData.get('sub_songs'));
+  let lyrics = (formData.get('lyrics') as string)?.trim() || null;
+  if (!lyrics && subSongs.length > 0) {
+    const parsed = subSongs.map(parseSubSongItem);
+    const hasAnyLyrics = parsed.some((s) => s.lyrics?.trim());
+    if (hasAnyLyrics) {
+      lyrics = formatSubSongsLyrics(parsed);
+    }
+  }
 
   const { error } = await supabase.from('songs').insert({
     title: (formData.get('title') as string).trim(),
@@ -15,7 +43,8 @@ export async function addSong(formData: FormData) {
     musical_key: (formData.get('musical_key') as string) || null,
     tempo: (formData.get('tempo') as string) || null,
     notes: (formData.get('notes') as string)?.trim() || null,
-    lyrics: (formData.get('lyrics') as string)?.trim() || null,
+    lyrics,
+    sub_songs: subSongs,
     rehearsal_status: 'none',
   });
 
@@ -28,6 +57,16 @@ export async function addSong(formData: FormData) {
 export async function updateSong(id: string, formData: FormData) {
   const supabase = await createClient();
 
+  const subSongs = parseSubSongsFromInput(formData.get('sub_songs'));
+  let lyrics = (formData.get('lyrics') as string)?.trim() || null;
+  if (!lyrics && subSongs.length > 0) {
+    const parsed = subSongs.map(parseSubSongItem);
+    const hasAnyLyrics = parsed.some((s) => s.lyrics?.trim());
+    if (hasAnyLyrics) {
+      lyrics = formatSubSongsLyrics(parsed);
+    }
+  }
+
   const { error } = await supabase
     .from('songs')
     .update({
@@ -37,7 +76,8 @@ export async function updateSong(id: string, formData: FormData) {
       musical_key: (formData.get('musical_key') as string) || null,
       tempo: (formData.get('tempo') as string) || null,
       notes: (formData.get('notes') as string)?.trim() || null,
-      lyrics: (formData.get('lyrics') as string)?.trim() || null,
+      lyrics,
+      sub_songs: subSongs,
       rehearsal_status: (formData.get('rehearsal_status') as string) || 'none',
     })
     .eq('id', id);
@@ -296,6 +336,7 @@ export async function addRehearsalSong(
     run_throughs: number;
     service_moment: string | null;
     song_leaders: string[];
+    sub_songs?: string[];
   },
 ) {
   const supabase = await createClient();
@@ -316,6 +357,7 @@ export async function addRehearsalSong(
     position: (songCount ?? 0) + (medleyCount ?? 0) + 1,
     medley_group_id: null,
     ...data,
+    sub_songs: data.sub_songs ?? [],
   });
   if (error) throw new Error(error.message);
   revalidatePath(`/rehearsal/${sessionId}`);
@@ -443,10 +485,14 @@ export async function updateRehearsalSong(
     arrangement_notes: string | null;
     service_moment: string | null;
     song_leaders: string[];
+    sub_songs?: string[];
   },
 ) {
   const supabase = await createClient();
-  const { error } = await supabase.from('rehearsal_songs').update(data).eq('id', id);
+  const { error } = await supabase
+    .from('rehearsal_songs')
+    .update({ ...data, sub_songs: data.sub_songs ?? [] })
+    .eq('id', id);
   if (error) throw new Error(error.message);
   revalidatePath(`/rehearsal/${sessionId}`);
 }
