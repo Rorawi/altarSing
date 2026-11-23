@@ -28,7 +28,8 @@ export type IconName =
   | 'moon'
   | 'menu'
   | 'arrow-left'
-  | 'lyrics';
+  | 'lyrics'
+  | 'microphone';
 
 type IconProps = SVGProps<SVGSVGElement> & {
   name: IconName;
@@ -64,6 +65,7 @@ const paths: Record<IconName, ReactNode> = {
   menu: <><path d="M4 6h16M4 12h16M4 18h16" /></>,
   'arrow-left': <><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></>,
   lyrics: <><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" /><path d="M8 7h8M8 11h8" /></>,
+  microphone: <><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 10a7 7 0 0 0 14 0M12 17v5m-4 0h8" /></>,
 };
 
 export default function Icon({ name, size = 18, ...props }: IconProps) {

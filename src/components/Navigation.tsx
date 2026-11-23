@@ -8,6 +8,7 @@ import Icon, { type IconName } from '@/components/Icon';
 const navItems: { href: string; label: string; shortLabel: string; icon: IconName }[] = [
   { href: '/library', label: 'Library', shortLabel: 'Library', icon: 'library' },
   { href: '/rehearsal', label: 'Rehearsals', shortLabel: 'Rehearsal', icon: 'music' },
+  { href: '/voice-rehearsal', label: 'Voice Studio', shortLabel: 'Studio', icon: 'microphone' },
   { href: '/attendance', label: 'Attendance', shortLabel: 'Attendance', icon: 'people' },
   { href: '/log', label: 'Service Log', shortLabel: 'Log', icon: 'history' },
 ];
