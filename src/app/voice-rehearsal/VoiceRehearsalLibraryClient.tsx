@@ -105,7 +105,7 @@ export default function VoiceRehearsalLibraryClient({
 
       {!adminConfigured && (
         <p className="mb-5 border-l-2 border-amber-500 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-          Admin access is disabled until <code>.env.local</code> has <code>REHEARSAL_ADMIN_PASSWORD</code> and <code>REHEARSAL_ADMIN_SESSION_SECRET</code> (at least 32 characters). Restart the dev server after adding them.
+          Voice Studio management needs <code>REHEARSAL_ADMIN_PASSWORD</code>, a <code>REHEARSAL_ADMIN_SESSION_SECRET</code> of at least 32 characters, and the server-only <code>SUPABASE_SERVICE_ROLE_KEY</code>. Set them in this environment, then restart the dev server or redeploy.
         </p>
       )}
 

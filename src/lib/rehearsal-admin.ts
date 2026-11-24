@@ -10,7 +10,8 @@ export function isRehearsalAdminConfigured() {
   return Boolean(
     process.env.REHEARSAL_ADMIN_PASSWORD &&
       process.env.REHEARSAL_ADMIN_SESSION_SECRET &&
-      process.env.REHEARSAL_ADMIN_SESSION_SECRET.length >= 32,
+      process.env.REHEARSAL_ADMIN_SESSION_SECRET.length >= 32 &&
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
   );
 }
 

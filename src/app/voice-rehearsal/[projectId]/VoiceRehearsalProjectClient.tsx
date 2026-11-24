@@ -8,6 +8,7 @@ import PageHeader from '@/components/PageHeader';
 import type { VoiceRehearsalProject, VoiceRehearsalTake } from '@/types/voice-rehearsal';
 import VoiceTakeRecorder from '../VoiceTakeRecorder';
 import VoiceTakeMixer from '../VoiceTakeMixer';
+import VoiceWaveformPlayer from '../VoiceWaveformPlayer';
 import DeleteVoiceRehearsalButton from '../DeleteVoiceRehearsalButton';
 import {
   closeSharedVoiceAudioContext,
@@ -71,7 +72,7 @@ export default function VoiceRehearsalProjectClient({
 
       {!adminConfigured && !isAdmin && (
         <p className="mb-5 border-l-2 border-amber-500 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-          Admin access is disabled until <code>.env.local</code> has <code>REHEARSAL_ADMIN_PASSWORD</code> and <code>REHEARSAL_ADMIN_SESSION_SECRET</code> (at least 32 characters). Restart the dev server after adding them.
+          Voice Studio management needs <code>REHEARSAL_ADMIN_PASSWORD</code>, a <code>REHEARSAL_ADMIN_SESSION_SECRET</code> of at least 32 characters, and the server-only <code>SUPABASE_SERVICE_ROLE_KEY</code>. Set them in this environment, then restart the dev server or redeploy.
         </p>
       )}
 
@@ -132,8 +133,6 @@ export default function VoiceRehearsalProjectClient({
 
 function VoiceTakeRow({ take, index, isAdmin, onDeleted, onTimingUpdated }: { take: VoiceRehearsalTake; index: number; isAdmin: boolean; onDeleted: () => void; onTimingUpdated: () => void }) {
   const audioRef = useRef<HTMLAudioElement>(null);
-  const [url, setUrl] = useState('');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -142,25 +141,6 @@ function VoiceTakeRow({ take, index, isAdmin, onDeleted, onTimingUpdated }: { ta
   const [savingTiming, setSavingTiming] = useState(false);
 
   useEffect(() => setOffsetDraft(take.offset_ms), [take.offset_ms]);
-
-  function loadPlayback() {
-    if (url) return;
-    setLoading(true);
-    setError('');
-    const playbackUrl = `/api/voice-rehearsal/takes/${take.id}/playback?stream=1`;
-    const audio = audioRef.current;
-    if (!audio) {
-      setLoading(false);
-      setError('The audio player is unavailable. Please try again.');
-      return;
-    }
-    audio.src = playbackUrl;
-    setUrl(playbackUrl);
-    void audio.play().then(() => setLoading(false)).catch(() => {
-      setLoading(false);
-      setError('Playback was blocked by the browser. Use the player controls to start it.');
-    });
-  }
 
   async function deleteTake() {
     setDeleting(true);
@@ -215,14 +195,16 @@ function VoiceTakeRow({ take, index, isAdmin, onDeleted, onTimingUpdated }: { ta
         <p className="font-serif text-lg font-medium text-slate-900 dark:text-slate-100">{take.part_label}</p>
         <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{formatDuration(take.duration_seconds)} · playback shift {formatMilliseconds(take.offset_ms)} · {new Date(take.created_at).toLocaleString()}</p>
       </div>
-      <audio ref={audioRef} controls={Boolean(url)} preload="none" src={url || undefined} onError={() => { if (url) { setLoading(false); setError('Playback is unavailable. Please try again.'); } }} className={url ? 'h-10 w-full max-w-lg' : 'hidden'} />
-      {!url && (
-        <button type="button" onClick={loadPlayback} disabled={loading || deleting} className="button-secondary min-w-28">
-          <Icon name="play" size={16} />{loading ? 'Loading…' : 'Listen'}
-        </button>
-      )}
-      {isAdmin && <button type="button" onClick={() => { setError(''); setOffsetDraft(take.offset_ms); setTimingOpen((open) => !open); }} disabled={deleting || loading || savingTiming} className="button-secondary">{timingOpen ? 'Close timing' : 'Adjust timing'}</button>}
-      {isAdmin && <button type="button" onClick={() => { setError(''); setConfirmingDelete(true); }} disabled={deleting || loading} className="button-danger-quiet" aria-label={`Delete ${take.part_label} part`}>{deleting ? 'Removing…' : <><Icon name="trash" size={16} />Remove</>}</button>}
+      <VoiceWaveformPlayer
+        audioRef={audioRef}
+        src={`/api/voice-rehearsal/takes/${take.id}/playback?stream=1`}
+        waveformSrc={`/api/voice-rehearsal/takes/${take.id}/playback?download=1`}
+        diagnosticUrl={`/api/voice-rehearsal/takes/${take.id}/playback?diagnose=1`}
+        durationSeconds={take.duration_seconds}
+        label={take.part_label}
+      />
+      {isAdmin && <button type="button" onClick={() => { setError(''); setOffsetDraft(take.offset_ms); setTimingOpen((open) => !open); }} disabled={deleting || savingTiming} className="button-secondary">{timingOpen ? 'Close timing' : 'Adjust timing'}</button>}
+      {isAdmin && <button type="button" onClick={() => { setError(''); setConfirmingDelete(true); }} disabled={deleting} className="button-danger-quiet" aria-label={`Delete ${take.part_label} part`}>{deleting ? 'Removing…' : <><Icon name="trash" size={16} />Remove</>}</button>}
       {error && !confirmingDelete && !timingOpen && <p role="alert" className="basis-full text-sm text-red-700 dark:text-red-300 sm:basis-auto">{error}</p>}
       {timingOpen && (
         <section aria-label={`Adjust ${take.part_label} timing`} className="basis-full border-l-2 border-violet-500 bg-slate-50 px-3 py-3 dark:bg-slate-900/60">

@@ -10,6 +10,8 @@ import {
   unregisterVoiceMixStopper,
 } from './VoiceAudioEngine';
 
+const MIX_WAVEFORM_BARS = 84;
+
 export default function VoiceTakeMixer({ takes }: { takes: VoiceRehearsalTake[] }) {
   const decodedBuffersRef = useRef<Map<string, AudioBuffer>>(new Map());
   const sourcesRef = useRef<AudioBufferSourceNode[]>([]);
@@ -22,12 +24,14 @@ export default function VoiceTakeMixer({ takes }: { takes: VoiceRehearsalTake[] 
   const [loadedCount, setLoadedCount] = useState(0);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [waveform, setWaveform] = useState<number[]>([]);
   const [error, setError] = useState('');
+  const playbackStartAtRef = useRef(0);
+  const playbackBasePositionRef = useRef(0);
+  const totalDurationRef = useRef(0);
+  const earliestOffsetRef = useRef(0);
 
-  function stopPlayback() {
-    playRequestRef.current += 1;
-    if (stopHandlerRef.current) unregisterVoiceMixStopper(stopHandlerRef.current);
-    stopHandlerRef.current = null;
+  function clearScheduledPlayback() {
     if (timerRef.current !== null) window.clearInterval(timerRef.current);
     timerRef.current = null;
     for (const source of sourcesRef.current) {
@@ -37,6 +41,13 @@ export default function VoiceTakeMixer({ takes }: { takes: VoiceRehearsalTake[] 
     sourcesRef.current = [];
     masterGainRef.current?.disconnect();
     masterGainRef.current = null;
+  }
+
+  function stopPlayback() {
+    playRequestRef.current += 1;
+    if (stopHandlerRef.current) unregisterVoiceMixStopper(stopHandlerRef.current);
+    stopHandlerRef.current = null;
+    clearScheduledPlayback();
     setLoading(false);
     setPlaying(false);
     setPosition(0);
@@ -64,7 +75,99 @@ export default function VoiceTakeMixer({ takes }: { takes: VoiceRehearsalTake[] 
     return decodedBuffersRef.current;
   }
 
+  function createWaveform(buffers: Map<string, AudioBuffer>, earliestOffset: number, totalDuration: number) {
+    const takesWithBuffers = takes.flatMap((take) => {
+      const buffer = buffers.get(take.id);
+      return buffer ? [{ buffer, start: take.offset_ms / 1000 - earliestOffset }] : [];
+    });
+    const rawPeaks = Array.from({ length: MIX_WAVEFORM_BARS }, (_, bar) => {
+      const barStart = (bar / MIX_WAVEFORM_BARS) * totalDuration;
+      const barEnd = ((bar + 1) / MIX_WAVEFORM_BARS) * totalDuration;
+      let peak = 0;
+      for (const { buffer, start } of takesWithBuffers) {
+        const overlapStart = Math.max(barStart, start);
+        const overlapEnd = Math.min(barEnd, start + buffer.duration);
+        if (overlapEnd <= overlapStart) continue;
+        const sampleCount = 24;
+        for (let sample = 0; sample < sampleCount; sample += 1) {
+          const timelineTime = overlapStart + ((sample + 0.5) / sampleCount) * (overlapEnd - overlapStart);
+          const frame = Math.min(buffer.length - 1, Math.max(0, Math.floor((timelineTime - start) * buffer.sampleRate)));
+          for (let channel = 0; channel < buffer.numberOfChannels; channel += 1) {
+            peak = Math.max(peak, Math.abs(buffer.getChannelData(channel)[frame]));
+          }
+        }
+      }
+      return peak;
+    });
+    const maximum = Math.max(...rawPeaks, 0.001);
+    return rawPeaks.map((peak) => Math.max(0.08, peak / maximum));
+  }
+
+  function startSourcesAt(context: AudioContext, startPosition: number, totalDuration: number) {
+    clearScheduledPlayback();
+    const playbackStartAt = context.currentTime + 0.15;
+    const sources: AudioBufferSourceNode[] = [];
+    const master = context.createGain();
+    master.gain.setValueAtTime(1, context.currentTime);
+    master.connect(context.destination);
+    masterGainRef.current = master;
+    sourcesRef.current = sources;
+    playbackStartAtRef.current = playbackStartAt;
+    playbackBasePositionRef.current = startPosition;
+    totalDurationRef.current = totalDuration;
+
+    for (const take of takes) {
+      const buffer = decodedBuffersRef.current.get(take.id);
+      if (!buffer) continue;
+      const takeStart = take.offset_ms / 1000 - earliestOffsetRef.current;
+      const takeEnd = takeStart + buffer.duration;
+      if (takeEnd <= startPosition) continue;
+
+      const source = context.createBufferSource();
+      source.buffer = buffer;
+      source.connect(master);
+      source.onended = () => {
+        if (!sourcesRef.current.includes(source)) return;
+        source.disconnect();
+        sourcesRef.current = sourcesRef.current.filter((activeSource) => activeSource !== source);
+        if (sourcesRef.current.length === 0) {
+          masterGainRef.current?.disconnect();
+          masterGainRef.current = null;
+          if (timerRef.current !== null) window.clearInterval(timerRef.current);
+          timerRef.current = null;
+          if (stopHandlerRef.current) unregisterVoiceMixStopper(stopHandlerRef.current);
+          stopHandlerRef.current = null;
+          setPlaying(false);
+          setPosition(totalDurationRef.current);
+        }
+      };
+      sources.push(source);
+      const startTime = playbackStartAt + Math.max(0, takeStart - startPosition);
+      const offsetWithinTake = Math.max(0, startPosition - takeStart);
+      source.start(startTime, offsetWithinTake);
+    }
+
+    if (sources.length === 0) {
+      master.disconnect();
+      masterGainRef.current = null;
+      if (timerRef.current !== null) window.clearInterval(timerRef.current);
+      timerRef.current = null;
+      if (stopHandlerRef.current) unregisterVoiceMixStopper(stopHandlerRef.current);
+      stopHandlerRef.current = null;
+      setPlaying(false);
+      setPosition(totalDuration);
+      return;
+    }
+
+    setPlaying(true);
+    timerRef.current = window.setInterval(() => {
+      const nextPosition = playbackBasePositionRef.current + context.currentTime - playbackStartAtRef.current;
+      setPosition(Math.min(totalDurationRef.current, Math.max(0, nextPosition)));
+    }, 80);
+  }
+
   async function playAll() {
+    const requestedStart = duration > 0 && position < duration ? position : 0;
     setError('');
     stopPlayback();
     const requestId = playRequestRef.current;
@@ -81,53 +184,18 @@ export default function VoiceTakeMixer({ takes }: { takes: VoiceRehearsalTake[] 
 
       const takeOffsets = takes.map((take) => take.offset_ms / 1000);
       const earliestOffset = Math.min(0, ...takeOffsets);
-      const commonOrigin = context.currentTime + 0.15 - earliestOffset;
-      const playbackStartAt = commonOrigin + earliestOffset;
-      const master = context.createGain();
-      master.gain.setValueAtTime(1, playbackStartAt);
-      master.connect(context.destination);
-      masterGainRef.current = master;
-      let endTime = Number.NEGATIVE_INFINITY;
-      let totalDuration = 0;
-      const sources: AudioBufferSourceNode[] = [];
-      sourcesRef.current = sources;
-
-      for (const take of takes) {
+      const endTime = takes.reduce((latest, take) => {
         const buffer = buffers.get(take.id);
-        if (!buffer) continue;
-        const source = context.createBufferSource();
-        source.buffer = buffer;
-        source.connect(master);
-        const correctionSeconds = take.offset_ms / 1000;
-        const scheduledStart = commonOrigin + correctionSeconds;
-        endTime = Math.max(endTime, correctionSeconds + buffer.duration);
-        source.onended = () => {
-          if (!sourcesRef.current.includes(source)) return;
-          source.disconnect();
-          sourcesRef.current = sourcesRef.current.filter((activeSource) => activeSource !== source);
-          if (sourcesRef.current.length === 0) {
-            masterGainRef.current?.disconnect();
-            masterGainRef.current = null;
-            if (timerRef.current !== null) window.clearInterval(timerRef.current);
-            timerRef.current = null;
-            if (stopHandlerRef.current) unregisterVoiceMixStopper(stopHandlerRef.current);
-            stopHandlerRef.current = null;
-            setPlaying(false);
-            setPosition(totalDuration);
-          }
-        };
-        sources.push(source);
-        source.start(scheduledStart);
-      }
-
-      if (sources.length === 0) throw new Error('There are no playable parts in this project.');
-      totalDuration = Math.max(0, endTime - earliestOffset);
+        return buffer ? Math.max(latest, take.offset_ms / 1000 + buffer.duration) : latest;
+      }, Number.NEGATIVE_INFINITY);
+      const totalDuration = Math.max(0, endTime - earliestOffset);
+      if (totalDuration <= 0) throw new Error('There are no playable parts in this project.');
+      earliestOffsetRef.current = earliestOffset;
+      setWaveform(createWaveform(buffers, earliestOffset, totalDuration));
       setDuration(totalDuration);
-      setPosition(0);
-      setPlaying(true);
-      timerRef.current = window.setInterval(() => {
-        setPosition(Math.min(totalDuration, Math.max(0, context.currentTime - playbackStartAt)));
-      }, 100);
+      const startPosition = Math.min(requestedStart, totalDuration);
+      setPosition(startPosition);
+      startSourcesAt(context, startPosition, totalDuration);
     } catch (cause) {
       if (requestId === playRequestRef.current) {
         stopPlayback();
@@ -138,6 +206,19 @@ export default function VoiceTakeMixer({ takes }: { takes: VoiceRehearsalTake[] 
     }
   }
 
+  function seekTo(value: number) {
+    const nextPosition = Math.max(0, Math.min(duration, value / 10));
+    setPosition(nextPosition);
+    if (playing) {
+      try {
+        startSourcesAt(getSharedVoiceAudioContext(), nextPosition, duration);
+      } catch (cause) {
+        stopPlayback();
+        setError(cause instanceof Error ? cause.message : 'The mix could not seek to that position.');
+      }
+    }
+  }
+
   if (takes.length === 0) return null;
 
   return (
@@ -145,7 +226,7 @@ export default function VoiceTakeMixer({ takes }: { takes: VoiceRehearsalTake[] 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 id="mixer-heading" className="font-serif text-lg font-semibold text-slate-950 dark:text-white">Listen to all parts</h2>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Parts are decoded in your browser and scheduled together.</p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Combined playback with saved timing adjustments.</p>
         </div>
         <div className="flex shrink-0 gap-2">
           <button type="button" onClick={playAll} disabled={loading || playing} className="button-primary">
@@ -162,8 +243,22 @@ export default function VoiceTakeMixer({ takes }: { takes: VoiceRehearsalTake[] 
       {duration > 0 && (
         <div className="mt-4 flex items-center gap-3">
           <span className="font-mono text-xs tabular-nums text-slate-500">{formatDuration(position)}</span>
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800" role="progressbar" aria-label="Mix playback progress" aria-valuemin={0} aria-valuemax={Math.round(duration)} aria-valuenow={Math.round(position)}>
-            <div className="h-full bg-violet-700 transition-[width] dark:bg-violet-300" style={{ width: `${Math.min(100, (position / duration) * 100)}%` }} />
+          <div className="min-w-0 flex-1">
+            <div className="flex h-12 items-center gap-[2px] overflow-hidden" aria-hidden="true">
+              {(waveform.length ? waveform : Array.from({ length: MIX_WAVEFORM_BARS }, (_, index) => 0.2 + 0.55 * Math.abs(Math.sin(index * 1.7)))).map((peak, index) => (
+                <span key={index} className={`min-w-[2px] flex-1 rounded-sm ${index / MIX_WAVEFORM_BARS <= position / duration ? 'bg-violet-700 dark:bg-violet-300' : 'bg-slate-300 dark:bg-slate-600'}`} style={{ height: `${Math.max(12, peak * 100)}%` }} />
+              ))}
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={Math.max(10, Math.ceil(duration * 10))}
+              step={1}
+              value={Math.min(Math.ceil(duration * 10), Math.round(position * 10))}
+              onChange={(event) => seekTo(Number(event.target.value))}
+              className="mt-1 block h-1 w-full cursor-pointer accent-violet-700 dark:accent-violet-300"
+              aria-label="Seek through all voice parts"
+            />
           </div>
           <span className="font-mono text-xs tabular-nums text-slate-500">{formatDuration(duration)}</span>
         </div>

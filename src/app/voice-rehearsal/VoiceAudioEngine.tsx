@@ -27,12 +27,11 @@ export async function getDecodedVoiceTake(take: VoiceRehearsalTake, context: Aud
   const cached = decodedTakes.get(take.id);
   if (cached) return cached;
 
-  const linkResponse = await fetch(`/api/voice-rehearsal/takes/${take.id}/playback`);
-  const linkResult = await linkResponse.json();
-  if (!linkResponse.ok) throw new Error(linkResult.error ?? `Could not load ${take.part_label}.`);
-
-  const audioResponse = await fetch(linkResult.url, { cache: 'force-cache' });
-  if (!audioResponse.ok) throw new Error(`Could not download the ${take.part_label} take.`);
+  const audioResponse = await fetch(`/api/voice-rehearsal/takes/${take.id}/playback?download=1`, { cache: 'no-store' });
+  if (!audioResponse.ok) {
+    const result = await audioResponse.json().catch(() => null) as { error?: string } | null;
+    throw new Error(result?.error ?? `Could not download the ${take.part_label} take.`);
+  }
   const decoded = await context.decodeAudioData(await audioResponse.arrayBuffer());
   decodedTakes.set(take.id, decoded);
   return decoded;

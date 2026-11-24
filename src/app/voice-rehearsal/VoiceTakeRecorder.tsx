@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Icon from '@/components/Icon';
 import type { VoiceRehearsalProject, VoiceRehearsalTake } from '@/types/voice-rehearsal';
 import { getDecodedVoiceTake, getSharedVoiceAudioContext, stopActiveVoiceMix } from './VoiceAudioEngine';
+import VoiceWaveformPlayer from './VoiceWaveformPlayer';
 
 const MAX_TAKE_SECONDS = 10 * 60;
 const COUNT_IN_INTERVAL_MS = 1000;
@@ -621,7 +622,7 @@ export default function VoiceTakeRecorder({
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
             <div><h3 className="font-medium text-slate-900 dark:text-slate-100">Preview {partLabel}</h3><p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{formatDuration(take.durationSeconds)} · estimated playback adjustment {formatSignedMilliseconds(take.offsetMs)} · not uploaded yet</p></div>
           </div>
-          <audio controls preload="metadata" src={take.url} className="h-10 w-full" />
+          <VoiceWaveformPlayer src={take.url} waveformSrc={take.url} durationSeconds={take.durationSeconds} label={`${partLabel} preview`} />
           {uploadError && <p role="alert" className="mt-3 text-sm text-red-700 dark:text-red-300">{uploadError} Your take is still on this device; you can retry the upload.</p>}
           <div className="mt-4 flex flex-wrap justify-end gap-2">
             <button type="button" onClick={discardTake} disabled={mode === 'uploading'} className="button-secondary">Discard</button>
