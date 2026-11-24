@@ -113,11 +113,12 @@ export default function VoiceRehearsalLibraryClient({
 
       {isAdmin && showCreate && (
         <form onSubmit={handleCreate} className="mb-6 border-y border-slate-200 py-4 dark:border-slate-800">
-          <h2 className="font-serif text-lg font-semibold text-slate-900 dark:text-white">New rehearsal project</h2>
+          <h2 className="font-serif text-lg font-semibold text-slate-900 dark:text-white">New voice rehearsal</h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem_auto] sm:items-end">
             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400">
-              Song or project title
-              <input required maxLength={120} value={title} onChange={(event) => setTitle(event.target.value)} className="field-control mt-1" placeholder="e.g. Great Is Thy Faithfulness" />
+              Rehearsal title
+              <input required maxLength={120} value={title} onChange={(event) => setTitle(event.target.value)} className="field-control mt-1" placeholder="Song · key · service or occasion" />
+              <span className="mt-1 block font-normal text-slate-500 dark:text-slate-400">Include the song and key, then add the service or occasion so singers can identify it (e.g. Amazing Grace · G major · Sunday service).</span>
             </label>
             <label className="block text-xs font-medium text-slate-600 dark:text-slate-400">
               Tempo (optional)

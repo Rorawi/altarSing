@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import Icon from '@/components/Icon';
 import { getSharedVoiceAudioContext } from './VoiceAudioEngine';
+import VoiceWaveformSeek from './VoiceWaveformSeek';
 
 const WAVEFORM_BARS = 76;
 
@@ -135,14 +136,14 @@ export default function VoiceWaveformPlayer({
     });
   }
 
-  function seekTo(value: number) {
+  function seekTo(seconds: number) {
     const audio = playerRef.current;
     if (!audio) return;
-    audio.currentTime = Math.max(0, Math.min(durationSeconds, value / 10));
-    setCurrentTime(audio.currentTime);
+    const nextTime = Math.max(0, Math.min(durationSeconds, seconds));
+    audio.currentTime = nextTime;
+    setCurrentTime(nextTime);
   }
 
-  const progress = durationSeconds > 0 ? Math.min(1, currentTime / durationSeconds) : 0;
   const fallbackPeaks = peaks.length > 0 ? peaks : Array.from({ length: WAVEFORM_BARS }, (_, index) => {
     const center = (WAVEFORM_BARS - 1) / 2;
     const envelope = 0.3 + 0.7 * Math.sin(Math.PI * (index + 1) / (WAVEFORM_BARS + 2));
@@ -167,24 +168,14 @@ export default function VoiceWaveformPlayer({
           <Icon name={playing ? 'pause' : 'play'} size={20} />
         </button>
         <div className="min-w-0 flex-1">
-          <div className="flex h-10 items-center gap-[2px] overflow-hidden" aria-hidden="true">
-            {fallbackPeaks.map((peak, index) => (
-              <span
-                key={index}
-                className={`min-w-[2px] flex-1 rounded-sm transition-colors ${index / WAVEFORM_BARS <= progress ? 'bg-violet-700 dark:bg-violet-300' : 'bg-slate-300 dark:bg-slate-600'} ${peaks.length === 0 ? 'opacity-60' : ''}`}
-                style={{ height: `${Math.max(12, peak * 100)}%` }}
-              />
-            ))}
-          </div>
-          <input
-            type="range"
-            min={0}
-            max={Math.max(10, Math.ceil(durationSeconds * 10))}
-            step={1}
-            value={Math.min(Math.ceil(durationSeconds * 10), Math.round(currentTime * 10))}
-            onChange={(event) => seekTo(Number(event.target.value))}
-            className="mt-1 block h-1 w-full cursor-pointer accent-violet-700 dark:accent-violet-300"
-            aria-label={`Seek ${label}`}
+          <VoiceWaveformSeek
+            peaks={fallbackPeaks}
+            position={currentTime}
+            duration={durationSeconds}
+            label={label}
+            onSeek={seekTo}
+            progressClassName="bg-violet-700 dark:bg-violet-300"
+            faded={peaks.length === 0}
           />
         </div>
         <span className="w-10 shrink-0 text-right font-mono text-xs tabular-nums text-slate-500 dark:text-slate-400">{formatDuration(playing || currentTime > 0 ? currentTime : durationSeconds)}</span>

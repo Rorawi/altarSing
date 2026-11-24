@@ -10,6 +10,8 @@ import VoiceTakeRecorder from '../VoiceTakeRecorder';
 import VoiceTakeMixer from '../VoiceTakeMixer';
 import VoiceWaveformPlayer from '../VoiceWaveformPlayer';
 import DeleteVoiceRehearsalButton from '../DeleteVoiceRehearsalButton';
+import VoiceRehearsalShare from '../VoiceRehearsalShare';
+import VoiceRecorderInfoButton from '../VoiceRecorderInfoButton';
 import {
   closeSharedVoiceAudioContext,
   forgetDecodedVoiceTake,
@@ -70,6 +72,8 @@ export default function VoiceRehearsalProjectClient({
         ) : adminConfigured ? <button type="button" onClick={() => setLoginOpen(true)} className="button-secondary">Admin access</button> : undefined}
       />
 
+      {isAdmin && takes.length > 0 && <VoiceRehearsalShare project={project} takes={takes} />}
+
       {!adminConfigured && !isAdmin && (
         <p className="mb-5 border-l-2 border-amber-500 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
           Voice Studio management needs <code>REHEARSAL_ADMIN_PASSWORD</code>, a <code>REHEARSAL_ADMIN_SESSION_SECRET</code> of at least 32 characters, and the server-only <code>SUPABASE_SERVICE_ROLE_KEY</code>. Set them in this environment, then restart the dev server or redeploy.
@@ -80,7 +84,7 @@ export default function VoiceRehearsalProjectClient({
         <div className="mb-3 flex items-baseline justify-between gap-4">
           <div>
             <h2 id="takes-heading" className="font-serif text-xl font-semibold text-slate-950 dark:text-white">Recorded parts</h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{takes.length} of 8 parts recorded</p>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{takes.length} of 8 parts recorded{takes.length > 0 ? ' · Tap or drag a waveform to seek' : ''}</p>
           </div>
         </div>
         {takes.length === 0 ? (
@@ -99,9 +103,11 @@ export default function VoiceRehearsalProjectClient({
 
       {isAdmin && takes.length < 8 && (
         <section aria-labelledby="record-heading" className="border-t border-slate-200 pt-6 dark:border-slate-800">
-          <h2 id="record-heading" className="font-serif text-xl font-semibold text-slate-950 dark:text-white">Record a part</h2>
-          <p className="mb-4 mt-1 text-sm text-slate-500 dark:text-slate-400">The take stays on this device until you preview and save it.</p>
-          {takes.length > 0 && <p className="mb-4 border-l-2 border-violet-700 px-3 py-2 text-sm text-slate-600 dark:border-violet-300 dark:text-slate-300">Existing parts will play in sync automatically when your recording starts. Keep your headphones on to prevent the backing audio from bleeding into the microphone.</p>}
+          <div className="flex items-center gap-2">
+            <h2 id="record-heading" className="font-serif text-xl font-semibold text-slate-950 dark:text-white">Record a part</h2>
+            <VoiceRecorderInfoButton />
+          </div>
+          <p className="mb-4 mt-1 text-sm text-slate-500 dark:text-slate-400">Preview your take before saving.</p>
           <VoiceTakeRecorder project={project} backingTakes={takes} onSaved={() => router.refresh()} />
         </section>
       )}

@@ -8,9 +8,13 @@ import VoiceWaveformPlayer from './VoiceWaveformPlayer';
 
 const MAX_TAKE_SECONDS = 10 * 60;
 const COUNT_IN_INTERVAL_MS = 1000;
+const MIN_TEMPO_BPM = 40;
+const MAX_TEMPO_BPM = 240;
 
 type RecorderMode = 'ready' | 'preparing' | 'counting-in' | 'recording' | 'stopping' | 'review' | 'uploading';
+type CountInMode = 'none' | 'seconds' | 'rhythm';
 type LocalTake = { blob: Blob; url: string; durationSeconds: number; mimeType: string; offsetMs: number };
+type TapRhythm = { hitsMs: number[]; loopDurationMs: number };
 type CaptureDiagnostics = {
   capturedAt: string;
   browser: string;
@@ -22,6 +26,7 @@ type CaptureDiagnostics = {
   echoCancellation: boolean | string | null;
   noiseSuppression: boolean | null;
   autoGainControl: boolean | null;
+  recordingGainDb: number;
   contextSampleRate: number;
   baseLatencyMs: number | null;
   outputLatencyMs: number | null;
@@ -43,12 +48,20 @@ export default function VoiceTakeRecorder({
   const [mode, setModeState] = useState<RecorderMode>('ready');
   const modeRef = useRef<RecorderMode>('ready');
   const [partLabel, setPartLabel] = useState('Soprano');
-  const [countInEnabled, setCountInEnabled] = useState(true);
+  const [tempo, setTempo] = useState(() => Math.max(MIN_TEMPO_BPM, Math.min(MAX_TEMPO_BPM, project.bpm ?? 120)));
+  const [tempoInput, setTempoInput] = useState(() => String(Math.max(MIN_TEMPO_BPM, Math.min(MAX_TEMPO_BPM, project.bpm ?? 120))));
+  const [tapCount, setTapCount] = useState(0);
+  const [tapPattern, setTapPattern] = useState<TapRhythm | null>(null);
+  const [capturingPattern, setCapturingPattern] = useState(false);
+  const [tapTempoNotice, setTapTempoNotice] = useState('');
+  const [countInMode, setCountInMode] = useState<CountInMode>('seconds');
   const [backingEnabled, setBackingEnabled] = useState(true);
   const [metronomeEnabled, setMetronomeEnabled] = useState(false);
-  const [countdownDisplay, setCountdownDisplay] = useState<'3' | '2' | '1' | 'GO' | null>(null);
+  const [countdownDisplay, setCountdownDisplay] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [level, setLevel] = useState(0);
+  const [inputClipping, setInputClipping] = useState(false);
+  const [recordingGainDb, setRecordingGainDb] = useState(3);
   const [take, setTake] = useState<LocalTake | null>(null);
   const takeRef = useRef<LocalTake | null>(null);
   const [error, setError] = useState('');
@@ -60,8 +73,10 @@ export default function VoiceTakeRecorder({
 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const recordingStreamRef = useRef<MediaStream | null>(null);
   const contextRef = useRef<AudioContext | null>(null);
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const recordingGainRef = useRef<GainNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const clickNodesRef = useRef<Set<OscillatorNode>>(new Set());
   const backingBuffersRef = useRef<Map<string, AudioBuffer>>(new Map());
@@ -74,6 +89,9 @@ export default function VoiceTakeRecorder({
   const elapsedTimerRef = useRef<number | null>(null);
   const maxLengthTimerRef = useRef<number | null>(null);
   const metronomeTimerRef = useRef<number | null>(null);
+  const tapTimesRef = useRef<number[]>([]);
+  const tapPatternRef = useRef<TapRhythm | null>(null);
+  const patternStartedAtRef = useRef<number | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const captureRequestRef = useRef(0);
   const recorderStartRequestedAtRef = useRef<number | null>(null);
@@ -101,15 +119,22 @@ export default function VoiceTakeRecorder({
     animationFrameRef.current = null;
     streamRef.current?.getTracks().forEach((trackItem) => trackItem.stop());
     streamRef.current = null;
+    recordingStreamRef.current?.getTracks().forEach((trackItem) => trackItem.stop());
+    recordingStreamRef.current = null;
     sourceRef.current?.disconnect();
     sourceRef.current = null;
+    recordingGainRef.current?.disconnect();
+    recordingGainRef.current = null;
     for (const node of clickNodesRef.current) {
       try { node.stop(); } catch { /* The click may already have ended. */ }
     }
     clickNodesRef.current.clear();
     contextRef.current = null;
     analyserRef.current = null;
-    if (mountedRef.current) setLevel(0);
+    if (mountedRef.current) {
+      setLevel(0);
+      setInputClipping(false);
+    }
   }
 
   function stopBackingPlayback() {
@@ -196,17 +221,151 @@ export default function VoiceTakeRecorder({
     oscillator.stop(at + 0.08);
   }
 
+  function startTapPattern() {
+    const downbeatAt = performance.now();
+    patternStartedAtRef.current = downbeatAt;
+    tapTimesRef.current = [downbeatAt];
+    setCapturingPattern(true);
+    setTapCount(1);
+    setError('');
+    setTapTempoNotice('Downbeat marked. Tap each following hit, then finish on the next downbeat; the pause before it is kept.');
+  }
+
+  function tapPatternBeat() {
+    if (!capturingPattern) return;
+    if (tapTimesRef.current.length >= 16) {
+      setTapTempoNotice('That is the 16-hit limit. Finish the bar on its next downbeat.');
+      return;
+    }
+    tapTimesRef.current = [...tapTimesRef.current, performance.now()];
+    setTapCount(tapTimesRef.current.length);
+    setTapTempoNotice(`${tapTimesRef.current.length} hits marked. Finish on the next downbeat; the gaps are kept as rests.`);
+  }
+
+  function finishTapPattern() {
+    if (!capturingPattern) return;
+    const taps = tapTimesRef.current;
+    if (taps.length < 3) {
+      setTapTempoNotice('Tap at least three audible hits before closing the bar.');
+      return;
+    }
+
+    const patternStartedAt = patternStartedAtRef.current;
+    if (patternStartedAt === null) return;
+    const finishedAt = performance.now();
+    const hitsMs = taps.map((tap) => tap - patternStartedAt);
+    const intervals = [...hitsMs.slice(1).map((tap, index) => tap - hitsMs[index]), finishedAt - taps[taps.length - 1]];
+    const sortedIntervals = [...intervals].sort((a, b) => a - b);
+    const middle = Math.floor(sortedIntervals.length / 2);
+    const median = sortedIntervals.length % 2
+      ? sortedIntervals[middle]
+      : (sortedIntervals[middle - 1] + sortedIntervals[middle]) / 2;
+    const measuredTempo = Math.round(60_000 / median);
+
+    if (measuredTempo < MIN_TEMPO_BPM || measuredTempo > MAX_TEMPO_BPM) {
+      setCapturingPattern(false);
+      tapTimesRef.current = [];
+      patternStartedAtRef.current = null;
+      setTapCount(0);
+      setTapTempoNotice('The measured pulse is outside 40–240 BPM. Start the bar again and retap it.');
+      return;
+    }
+    setTempo(measuredTempo);
+    setTempoInput(String(measuredTempo));
+    const nextPattern = { hitsMs, loopDurationMs: finishedAt - patternStartedAt };
+    tapPatternRef.current = nextPattern;
+    setTapPattern(nextPattern);
+    setCapturingPattern(false);
+    tapTimesRef.current = [];
+    patternStartedAtRef.current = null;
+    setCountInMode('rhythm');
+    setTapTempoNotice(`Bar captured · ${taps.length} audible hits · ${measuredTempo} BPM`);
+  }
+
+  function cancelTapPattern() {
+    setCapturingPattern(false);
+    tapTimesRef.current = [];
+    patternStartedAtRef.current = null;
+    setTapCount(0);
+    setTapTempoNotice(tapPatternRef.current ? 'Pattern capture canceled. Your previous rhythm is kept.' : 'Pattern capture canceled.');
+  }
+
+  function setManualTempo(value: number) {
+    const nextTempo = Math.max(MIN_TEMPO_BPM, Math.min(MAX_TEMPO_BPM, value));
+    if (tapPatternRef.current && tempo !== nextTempo) {
+      const scale = tempo / nextTempo;
+      const adjustedPattern = {
+        hitsMs: tapPatternRef.current.hitsMs.map((hit) => hit * scale),
+        loopDurationMs: tapPatternRef.current.loopDurationMs * scale,
+      };
+      tapPatternRef.current = adjustedPattern;
+      setTapPattern(adjustedPattern);
+      setTapTempoNotice(`Tempo adjusted · your tapped rhythm is kept at ${nextTempo} BPM`);
+    } else if (!tapPatternRef.current) {
+      setTapTempoNotice('Manual tempo set. Tap a rhythm to capture its timing pattern.');
+    }
+    setTempo(nextTempo);
+    setTempoInput(String(nextTempo));
+  }
+
+  function startMetronome(context: AudioContext, pattern: TapRhythm) {
+    if (pattern.hitsMs.length === 0) return;
+    let cycleStartAt = context.currentTime + 0.03;
+    let patternIndex = 0;
+    let nextBeatAt = cycleStartAt + pattern.hitsMs[0] / 1000;
+    metronomeTimerRef.current = window.setInterval(() => {
+      const horizon = context.currentTime + 0.12;
+      while (nextBeatAt <= horizon) {
+        scheduleClick(context, nextBeatAt, patternIndex === 0);
+        patternIndex += 1;
+        if (patternIndex >= pattern.hitsMs.length) {
+          cycleStartAt += pattern.loopDurationMs / 1000;
+          patternIndex = 0;
+        }
+        nextBeatAt = cycleStartAt + pattern.hitsMs[patternIndex] / 1000;
+      }
+    }, 25);
+  }
+
+  async function previewBeat() {
+    setError('');
+    try {
+      const context = getSharedVoiceAudioContext();
+      await context.resume();
+      for (const node of clickNodesRef.current) {
+        try { node.stop(); } catch { /* The click may already have ended. */ }
+      }
+      clickNodesRef.current.clear();
+      const firstBeatAt = context.currentTime + 0.05;
+      const beatMilliseconds = 60_000 / tempo;
+      const pattern = tapPatternRef.current ?? {
+        hitsMs: [0, beatMilliseconds, beatMilliseconds * 2, beatMilliseconds * 3],
+        loopDurationMs: beatMilliseconds * 4,
+      };
+      for (let cycle = 0; cycle < 2; cycle += 1) {
+        pattern.hitsMs.forEach((hit, index) => {
+          scheduleClick(context, firstBeatAt + (cycle * pattern.loopDurationMs + hit) / 1000, index === 0);
+        });
+      }
+    } catch {
+      setError('The beat preview could not start in this browser.');
+    }
+  }
+
   function startMeter(analyser: AnalyserNode) {
     const samples = new Uint8Array(analyser.fftSize);
     const measure = () => {
       analyser.getByteTimeDomainData(samples);
       let total = 0;
+      let peak = 0;
       for (const sample of samples) {
         const normalized = (sample - 128) / 128;
         total += normalized * normalized;
+        peak = Math.max(peak, Math.abs(normalized));
       }
       const rms = Math.sqrt(total / samples.length);
       setLevel(Math.min(1, rms * 4));
+      setInputClipping(peak >= 0.97);
       animationFrameRef.current = requestAnimationFrame(measure);
     };
     animationFrameRef.current = requestAnimationFrame(measure);
@@ -237,7 +396,7 @@ export default function VoiceTakeRecorder({
     }
   }
 
-  function beginRecording(recorder: MediaRecorder, beatMilliseconds: number | null) {
+  function beginRecording(recorder: MediaRecorder, pattern: TapRhythm) {
     if (modeRef.current !== 'counting-in' && modeRef.current !== 'ready' && modeRef.current !== 'preparing') return;
     try {
       recorderStartRequestedAtRef.current = performance.now();
@@ -259,12 +418,7 @@ export default function VoiceTakeRecorder({
         setNotice('The 10-minute take limit was reached. Review the saved take below.');
         stopCapture();
       }, MAX_TAKE_SECONDS * 1000);
-      if (metronomeEnabled && beatMilliseconds && contextRef.current) {
-        metronomeTimerRef.current = window.setInterval(
-          () => scheduleClick(contextRef.current!, contextRef.current!.currentTime, false),
-          beatMilliseconds,
-        );
-      }
+      if (metronomeEnabled && pattern.hitsMs.length > 0 && contextRef.current) startMetronome(contextRef.current, pattern);
     } catch {
       setError('Recording could not start on this browser. Try refreshing the page or using a different browser.');
       clearTimers();
@@ -279,6 +433,14 @@ export default function VoiceTakeRecorder({
     setNotice('');
     setDiagnostics(null);
     setDiagnosticsCopyStatus('');
+    if (capturingPattern) {
+      setError('Finish or cancel the rhythm pattern before recording.');
+      return;
+    }
+    if (countInMode === 'rhythm' && !tapPatternRef.current) {
+      setError('Capture a complete rhythm pattern before choosing it as the count-in.');
+      return;
+    }
     if (!partLabel.trim()) {
       setError('Enter a name for this voice part.');
       return;
@@ -340,10 +502,17 @@ export default function VoiceTakeRecorder({
       setPreparationStatus('Starting recorder…');
       const source = context.createMediaStreamSource(stream);
       sourceRef.current = source;
+      const recordingGain = context.createGain();
+      recordingGain.gain.setValueAtTime(10 ** (recordingGainDb / 20), context.currentTime);
+      recordingGainRef.current = recordingGain;
       const analyser = context.createAnalyser();
       analyser.fftSize = 256;
-      source.connect(analyser);
+      const recordingDestination = context.createMediaStreamDestination();
+      source.connect(recordingGain);
+      recordingGain.connect(analyser);
+      analyser.connect(recordingDestination);
       analyserRef.current = analyser;
+      recordingStreamRef.current = recordingDestination.stream;
       startMeter(analyser);
       const outputLatency = (context as AudioContext & { outputLatency?: number }).outputLatency ?? 0;
       const inputSettings = stream.getAudioTracks()[0]?.getSettings();
@@ -351,7 +520,7 @@ export default function VoiceTakeRecorder({
       const inputLatency = typeof reportedInputLatency === 'number' ? reportedInputLatency : 0;
       latencyOffsetMsRef.current = Math.max(-5000, Math.min(0, -Math.round((context.baseLatency + outputLatency + inputLatency) * 1000)));
 
-      const recorder = new MediaRecorder(stream, {
+      const recorder = new MediaRecorder(recordingDestination.stream, {
         mimeType: supportedMimeType,
         audioBitsPerSecond: 64_000,
       });
@@ -413,6 +582,7 @@ export default function VoiceTakeRecorder({
         echoCancellation: inputSettings?.echoCancellation ?? null,
         noiseSuppression: inputSettings?.noiseSuppression ?? null,
         autoGainControl: inputSettings?.autoGainControl ?? null,
+        recordingGainDb,
         contextSampleRate: context.sampleRate,
         baseLatencyMs: Number.isFinite(context.baseLatency) ? Math.round(context.baseLatency * 1000 * 10) / 10 : null,
         outputLatencyMs: Number.isFinite(outputLatency) ? Math.round(outputLatency * 1000 * 10) / 10 : null,
@@ -423,26 +593,76 @@ export default function VoiceTakeRecorder({
       });
 
       setPreparationStatus('');
-      const beatMilliseconds = 60_000 / (project.bpm ?? 120);
-      if (countInEnabled) {
+      const beatMilliseconds = 60_000 / tempo;
+      const pattern = tapPatternRef.current ?? {
+        hitsMs: [0, beatMilliseconds, beatMilliseconds * 2, beatMilliseconds * 3],
+        loopDurationMs: beatMilliseconds * 4,
+      };
+      if (countInMode === 'seconds') {
         setMode('counting-in');
+        const countInStartedAt = performance.now();
+        const countInAudioStart = context.currentTime + 0.05;
+        const countLabels: Array<'3' | '2' | '1' | 'GO'> = ['3', '2', '1', 'GO'];
+        countLabels.forEach((label, step) => {
+          scheduleClick(context, countInAudioStart + (COUNT_IN_INTERVAL_MS / 1000) * step, step === 0 || label === 'GO');
+        });
         const showCount = (step: number) => {
           if (modeRef.current !== 'counting-in') return;
           if (step < 3) {
-            setCountdownDisplay(String(3 - step) as '3' | '2' | '1');
-            scheduleClick(context, context.currentTime + 0.01, step === 0);
-            countInTimerRef.current = window.setTimeout(() => showCount(step + 1), COUNT_IN_INTERVAL_MS);
+            setCountdownDisplay(countLabels[step]);
+            const nextCountAt = countInStartedAt + COUNT_IN_INTERVAL_MS * (step + 1);
+            countInTimerRef.current = window.setTimeout(() => showCount(step + 1), Math.max(0, nextCountAt - performance.now()));
             return;
           }
           setCountdownDisplay('GO');
-          scheduleClick(context, context.currentTime + 0.01, true);
-          beginRecording(recorder, beatMilliseconds);
+          beginRecording(recorder, pattern);
           countInTimerRef.current = window.setTimeout(() => setCountdownDisplay(null), 900);
         };
         showCount(0);
+      } else if (countInMode === 'rhythm') {
+        setMode('counting-in');
+        const countInAudioStart = context.currentTime + 0.05;
+        const countInStartedAt = performance.now() + 50;
+        pattern.hitsMs.forEach((hit, index) => {
+          scheduleClick(context, countInAudioStart + hit / 1000, index === 0);
+        });
+
+        const showPatternCount = (step: number) => {
+          if (modeRef.current !== 'counting-in') return;
+          if (step < pattern.hitsMs.length) {
+            const nextHitAt = countInStartedAt + pattern.hitsMs[step];
+            if (performance.now() < nextHitAt) {
+              const waitingMilliseconds = nextHitAt - performance.now();
+              setCountdownDisplay(waitingMilliseconds > (60_000 / tempo) * 1.4 ? 'REST' : `${step} / ${pattern.hitsMs.length}`);
+              countInTimerRef.current = window.setTimeout(
+                () => showPatternCount(step),
+                Math.max(0, waitingMilliseconds),
+              );
+              return;
+            }
+            setCountdownDisplay(`${step + 1} / ${pattern.hitsMs.length}`);
+            showPatternCount(step + 1);
+            return;
+          }
+
+          const loopEndsAt = countInStartedAt + pattern.loopDurationMs;
+          if (performance.now() < loopEndsAt) {
+            const waitingMilliseconds = loopEndsAt - performance.now();
+            setCountdownDisplay(waitingMilliseconds > (60_000 / tempo) * 1.4 ? 'REST' : `${pattern.hitsMs.length} / ${pattern.hitsMs.length}`);
+            countInTimerRef.current = window.setTimeout(
+              () => showPatternCount(step),
+              Math.max(0, waitingMilliseconds),
+            );
+            return;
+          }
+          setCountdownDisplay('GO');
+          beginRecording(recorder, pattern);
+          countInTimerRef.current = window.setTimeout(() => setCountdownDisplay(null), 900);
+        };
+        showPatternCount(0);
       } else {
         setCountdownDisplay(null);
-        beginRecording(recorder, beatMilliseconds);
+        beginRecording(recorder, pattern);
       }
     } catch (cause) {
       if (requestId !== captureRequestRef.current) return;
@@ -514,10 +734,28 @@ export default function VoiceTakeRecorder({
 
   return (
     <div className="max-w-3xl space-y-4">
-      <div className="border-l-2 border-amber-500 bg-amber-50 px-3 py-3 text-sm text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
-        <p className="font-semibold">Use headphones while recording.</p>
-        <p className="mt-1">The recording is stored in AltarSing and can be heard by anyone who can access this site.</p>
-        <p className="mt-1 text-xs text-amber-800 dark:text-amber-200">Bluetooth headphones can add timing delay; wired headphones are more reliable. Recording needs microphone permission over HTTPS.</p>
+      <div role="note" className="flex items-center gap-2 border-l-2 border-amber-500 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
+        <Icon name="headphones" size={17} className="shrink-0" />
+        <p><span className="font-semibold">Use headphones while recording</span> to keep backing audio out of the mic.</p>
+      </div>
+
+      <div className="border-y border-slate-200 py-3 dark:border-slate-800">
+        <div className="flex items-center justify-between gap-4">
+          <label htmlFor="voice-recording-gain" className="text-sm font-medium text-slate-800 dark:text-slate-100">Recording gain</label>
+          <output htmlFor="voice-recording-gain" className="font-mono text-sm tabular-nums text-slate-600 dark:text-slate-300">+{recordingGainDb} dB</output>
+        </div>
+        <input
+          id="voice-recording-gain"
+          type="range"
+          min={0}
+          max={12}
+          step={1}
+          value={recordingGainDb}
+          onChange={(event) => setRecordingGainDb(Number(event.target.value))}
+          disabled={(mode !== 'ready' && mode !== 'review') || capturingPattern}
+          className="mt-2 w-full accent-violet-800"
+          aria-label="Recording gain in decibels"
+        />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_11rem] sm:items-end">
@@ -528,16 +766,64 @@ export default function VoiceTakeRecorder({
             <option value="Soprano" /><option value="Alto" /><option value="Tenor" /><option value="Bass" /><option value="Lead" /><option value="Beatbox" />
           </datalist>
         </label>
-        <div className="flex items-center justify-between gap-3 rounded-md border border-slate-200 px-3 py-2 dark:border-slate-800">
-          <span className="text-xs text-slate-500 dark:text-slate-400">Tempo</span>
-          <span className="font-mono text-sm font-semibold tabular-nums text-slate-800 dark:text-slate-100">{project.bpm ? `${project.bpm} BPM` : 'Not set'}</span>
+        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400">
+          Tempo · BPM
+          <input
+            type="number"
+            min={MIN_TEMPO_BPM}
+            max={MAX_TEMPO_BPM}
+            step={1}
+            value={tempoInput}
+            onChange={(event) => {
+              const value = event.target.value;
+              setTempoInput(value);
+              tapTimesRef.current = [];
+              setTapCount(0);
+              const parsed = Number(value);
+              if (value && Number.isFinite(parsed) && parsed >= MIN_TEMPO_BPM && parsed <= MAX_TEMPO_BPM) setManualTempo(parsed);
+            }}
+            onBlur={() => {
+              const parsed = Number(tempoInput);
+              const nextTempo = Number.isFinite(parsed) && parsed > 0 ? Math.max(MIN_TEMPO_BPM, Math.min(MAX_TEMPO_BPM, parsed)) : tempo;
+              setManualTempo(nextTempo);
+            }}
+            disabled={mode !== 'ready' || capturingPattern}
+            className="field-control mt-1"
+          />
+        </label>
+      </div>
+
+      <div className="border-y border-slate-200 py-3 dark:border-slate-800">
+        <div className="flex flex-wrap items-center gap-2">
+          {!capturingPattern ? (
+            <button type="button" onClick={startTapPattern} disabled={mode !== 'ready'} className="button-secondary">
+              <span aria-hidden="true" className="font-serif text-lg leading-none">♩</span>{tapPattern ? 'Record rhythm again' : 'Start on downbeat'}
+            </button>
+          ) : (
+            <>
+              <button type="button" onClick={tapPatternBeat} disabled={mode !== 'ready' || tapCount >= 16} className="button-primary">
+                <span aria-hidden="true" className="font-serif text-lg leading-none">♩</span>Tap audible hit
+              </button>
+              <button type="button" onClick={finishTapPattern} disabled={tapCount < 3} className="button-secondary">Mark next downbeat</button>
+              <button type="button" onClick={cancelTapPattern} className="button-quiet">Cancel</button>
+            </>
+          )}
+          <button type="button" onClick={previewBeat} disabled={mode !== 'ready' || capturingPattern} className="button-quiet">
+            <Icon name="play" size={16} />Preview rhythm
+          </button>
+          {!capturingPattern && tapPattern && <span className="font-mono text-xs tabular-nums text-slate-500 dark:text-slate-400">{tapPattern.hitsMs.length} hits · {formatDuration(tapPattern.loopDurationMs / 1000)} loop</span>}
         </div>
+        {tapTempoNotice && <p aria-live="polite" className="mt-2 text-sm text-slate-600 dark:text-slate-300">{tapTempoNotice}</p>}
       </div>
 
       <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
         <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-          <input type="checkbox" checked={countInEnabled} onChange={(event) => setCountInEnabled(event.target.checked)} disabled={mode !== 'ready'} className="accent-violet-800" />
-          3, 2, 1, GO count-in · 1 second per count
+          <span>Count-in</span>
+          <select value={countInMode} onChange={(event) => setCountInMode(event.target.value as CountInMode)} disabled={mode !== 'ready' || capturingPattern} className="field-control min-h-9 w-auto py-1">
+            <option value="none">Off</option>
+            <option value="seconds">3 seconds</option>
+            <option value="rhythm" disabled={!tapPattern}>One captured loop</option>
+          </select>
         </label>
         {backingTakes.length > 0 && (
           <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
@@ -547,7 +833,7 @@ export default function VoiceTakeRecorder({
         )}
         <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
           <input type="checkbox" checked={metronomeEnabled} onChange={(event) => setMetronomeEnabled(event.target.checked)} disabled={mode !== 'ready'} className="accent-violet-800" />
-          Click during recording
+          Metronome at this tempo during recording
         </label>
       </div>
 
@@ -563,7 +849,7 @@ export default function VoiceTakeRecorder({
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
               <span className={`h-2.5 w-2.5 rounded-full ${mode === 'recording' ? 'animate-pulse bg-red-600' : 'bg-amber-500'}`} />
-              {mode === 'counting-in' ? 'Get ready' : mode === 'stopping' ? 'Finalizing take…' : 'Recording'}
+              {mode === 'counting-in' ? (countInMode === 'rhythm' ? 'Rhythm count-in' : 'Get ready') : mode === 'stopping' ? 'Finalizing take…' : 'Recording'}
             </div>
             <span className="font-mono text-lg tabular-nums text-slate-900 dark:text-white">{formatDuration(elapsed)} <span className="text-sm text-slate-500">/ 10:00</span></span>
           </div>
@@ -573,9 +859,11 @@ export default function VoiceTakeRecorder({
             </div>
           )}
           <div role="meter" aria-label="Microphone input level" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(level * 100)} className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-            <div className="h-full bg-emerald-600 transition-[width] duration-75 dark:bg-emerald-400" style={{ width: `${Math.round(level * 100)}%` }} />
+            <div className={`h-full transition-[width] duration-75 ${inputClipping ? 'bg-red-600' : 'bg-emerald-600 dark:bg-emerald-400'}`} style={{ width: `${Math.round(level * 100)}%` }} />
           </div>
-          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Input level · max take length 10:00</p>
+          <p className={`mt-2 text-xs ${inputClipping ? 'font-medium text-red-700 dark:text-red-300' : 'text-slate-500 dark:text-slate-400'}`}>
+            {inputClipping ? 'Clipping detected. Lower recording gain or move a little farther from the microphone.' : 'Input level · max take length 10:00'}
+          </p>
         </div>
       )}
 
@@ -588,6 +876,7 @@ export default function VoiceTakeRecorder({
           <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">These are browser and device readings to help diagnose timing. The estimated playback adjustment is not a measurement of how the singing aligns.</p>
           <dl className="mt-3 grid gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
             <DiagnosticReading label="Microphone-reported latency" value={formatMilliseconds(diagnostics.inputLatencyMs)} />
+            <DiagnosticReading label="Recording gain" value={`+${diagnostics.recordingGainDb} dB`} />
             <DiagnosticReading label="Audio output latency" value={formatMilliseconds(diagnostics.outputLatencyMs)} />
             <DiagnosticReading label="Audio context base latency" value={formatMilliseconds(diagnostics.baseLatencyMs)} />
             <DiagnosticReading label="Saved playback adjustment" value={formatSignedMilliseconds(diagnostics.estimatedOffsetMs)} />
@@ -606,7 +895,7 @@ export default function VoiceTakeRecorder({
       )}
 
       {mode === 'ready' && (
-        <button type="button" onClick={startCapture} disabled={!partLabel.trim()} className="button-primary min-w-40">
+        <button type="button" onClick={startCapture} disabled={!partLabel.trim() || capturingPattern} className="button-primary min-w-40">
           <span className="h-2.5 w-2.5 rounded-full bg-red-300" />Start recording
         </button>
       )}

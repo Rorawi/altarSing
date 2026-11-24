@@ -15,6 +15,17 @@ export function getSharedVoiceAudioContext() {
   return sharedContext;
 }
 
+export function activateVoiceAudioFromGesture(context: AudioContext) {
+  // iOS home-screen apps can leave Web Audio suspended until playback is
+  // started directly from a tap. A silent one-sample source primes that path.
+  const source = context.createBufferSource();
+  source.buffer = context.createBuffer(1, 1, context.sampleRate);
+  source.connect(context.destination);
+  source.onended = () => source.disconnect();
+  source.start();
+  return context.resume();
+}
+
 export function closeSharedVoiceAudioContext() {
   const context = sharedContext;
   sharedContext = null;

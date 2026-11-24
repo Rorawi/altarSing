@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import Icon from '@/components/Icon';
 import type { VoiceRehearsalTake } from '@/types/voice-rehearsal';
+import VoiceWaveformSeek from './VoiceWaveformSeek';
 import {
+  activateVoiceAudioFromGesture,
   getDecodedVoiceTake,
   getSharedVoiceAudioContext,
   registerVoiceMixStopper,
@@ -11,6 +13,7 @@ import {
 } from './VoiceAudioEngine';
 
 const MIX_WAVEFORM_BARS = 84;
+const AUDIO_RESUME_TIMEOUT_MS = 2500;
 
 export default function VoiceTakeMixer({ takes }: { takes: VoiceRehearsalTake[] }) {
   const decodedBuffersRef = useRef<Map<string, AudioBuffer>>(new Map());
@@ -73,6 +76,23 @@ export default function VoiceTakeMixer({ takes }: { takes: VoiceRehearsalTake[] 
     }));
     setLoadedCount(takes.filter((take) => decodedBuffersRef.current.has(take.id)).length);
     return decodedBuffersRef.current;
+  }
+
+  async function waitForAudioContext(context: AudioContext, resumePromise: Promise<void>) {
+    let timeoutId: number | null = null;
+    try {
+      await Promise.race([
+        resumePromise,
+        new Promise<void>((_, reject) => {
+          timeoutId = window.setTimeout(() => reject(new Error('The audio engine did not start. Tap Play all to try again. If this iPhone app was reopened from the background, close and reopen it.')), AUDIO_RESUME_TIMEOUT_MS);
+        }),
+      ]);
+    } finally {
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+    }
+    if (context.state !== 'running') {
+      throw new Error('The audio engine is still paused. Tap Play all to try again.');
+    }
   }
 
   function createWaveform(buffers: Map<string, AudioBuffer>, earliestOffset: number, totalDuration: number) {
@@ -177,10 +197,13 @@ export default function VoiceTakeMixer({ takes }: { takes: VoiceRehearsalTake[] 
     setLoading(true);
     try {
       const context = getSharedVoiceAudioContext();
-      await context.resume();
+      // Call both start() and resume() synchronously from the Play all tap so
+      // iOS PWAs activate the Web Audio output before the network/decode awaits.
+      await waitForAudioContext(context, activateVoiceAudioFromGesture(context));
       const buffers = await getBuffers(context);
       if (requestId !== playRequestRef.current) return;
       if (takes.length === 0) return;
+      if (context.state !== 'running') await waitForAudioContext(context, context.resume());
 
       const takeOffsets = takes.map((take) => take.offset_ms / 1000);
       const earliestOffset = Math.min(0, ...takeOffsets);
@@ -206,8 +229,8 @@ export default function VoiceTakeMixer({ takes }: { takes: VoiceRehearsalTake[] 
     }
   }
 
-  function seekTo(value: number) {
-    const nextPosition = Math.max(0, Math.min(duration, value / 10));
+  function seekTo(seconds: number) {
+    const nextPosition = Math.max(0, Math.min(duration, seconds));
     setPosition(nextPosition);
     if (playing) {
       try {
@@ -226,7 +249,7 @@ export default function VoiceTakeMixer({ takes }: { takes: VoiceRehearsalTake[] 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 id="mixer-heading" className="font-serif text-lg font-semibold text-slate-950 dark:text-white">Listen to all parts</h2>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Combined playback with saved timing adjustments.</p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Combined playback with saved timing adjustments. Tap or drag the waveform to seek.</p>
         </div>
         <div className="flex shrink-0 gap-2">
           <button type="button" onClick={playAll} disabled={loading || playing} className="button-primary">
@@ -244,20 +267,12 @@ export default function VoiceTakeMixer({ takes }: { takes: VoiceRehearsalTake[] 
         <div className="mt-4 flex items-center gap-3">
           <span className="font-mono text-xs tabular-nums text-slate-500">{formatDuration(position)}</span>
           <div className="min-w-0 flex-1">
-            <div className="flex h-12 items-center gap-[2px] overflow-hidden" aria-hidden="true">
-              {(waveform.length ? waveform : Array.from({ length: MIX_WAVEFORM_BARS }, (_, index) => 0.2 + 0.55 * Math.abs(Math.sin(index * 1.7)))).map((peak, index) => (
-                <span key={index} className={`min-w-[2px] flex-1 rounded-sm ${index / MIX_WAVEFORM_BARS <= position / duration ? 'bg-violet-700 dark:bg-violet-300' : 'bg-slate-300 dark:bg-slate-600'}`} style={{ height: `${Math.max(12, peak * 100)}%` }} />
-              ))}
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={Math.max(10, Math.ceil(duration * 10))}
-              step={1}
-              value={Math.min(Math.ceil(duration * 10), Math.round(position * 10))}
-              onChange={(event) => seekTo(Number(event.target.value))}
-              className="mt-1 block h-1 w-full cursor-pointer accent-violet-700 dark:accent-violet-300"
-              aria-label="Seek through all voice parts"
+            <VoiceWaveformSeek
+              peaks={waveform.length ? waveform : Array.from({ length: MIX_WAVEFORM_BARS }, (_, index) => 0.2 + 0.55 * Math.abs(Math.sin(index * 1.7)))}
+              position={position}
+              duration={duration}
+              label="all voice parts"
+              onSeek={seekTo}
             />
           </div>
           <span className="font-mono text-xs tabular-nums text-slate-500">{formatDuration(duration)}</span>
