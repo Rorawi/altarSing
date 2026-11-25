@@ -16,12 +16,14 @@ export function getSharedVoiceAudioContext() {
 }
 
 export function activateVoiceAudioFromGesture(context: AudioContext) {
-  // Keep a live, muted source connected while the first mix downloads and
+  // Keep a live, near-silent source connected while the first mix downloads and
   // decodes. iOS PWAs can suspend an otherwise-unlocked context during that
   // async gap if the only gesture-started source is a one-sample silent blip.
   const oscillator = context.createOscillator();
   const mute = context.createGain();
-  mute.gain.setValueAtTime(0, context.currentTime);
+  // A zero-gain source can be optimized as silence. Keep a non-zero signal at
+  // -100 dBFS so the WebKit audio route stays active without an audible tone.
+  mute.gain.setValueAtTime(0.00001, context.currentTime);
   oscillator.connect(mute);
   mute.connect(context.destination);
   oscillator.start();

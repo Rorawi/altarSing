@@ -16,11 +16,20 @@ export async function GET(
     const publicClient = createVoicePublicClient();
     const { data: take, error } = await publicClient
       .from('rehearsal_takes')
-      .select('storage_path, expires_at')
+      .select('storage_path, project_id, expires_at')
       .eq('id', takeId)
       .single();
     if (error || !take || new Date(take.expires_at).getTime() <= Date.now()) {
       return NextResponse.json({ error: 'This recording was not found or has expired.' }, { status: 404 });
+    }
+
+    const { data: project, error: projectError } = await publicClient
+      .from('rehearsal_projects')
+      .select('expires_at')
+      .eq('id', take.project_id)
+      .single();
+    if (projectError || !project || new Date(project.expires_at).getTime() <= Date.now()) {
+      return NextResponse.json({ error: 'This rehearsal project was not found or has expired.' }, { status: 404 });
     }
 
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {

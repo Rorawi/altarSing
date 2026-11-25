@@ -6,7 +6,7 @@ import type { VoiceRehearsalProject, VoiceRehearsalSection, VoiceRehearsalTake }
 import DismissableDetails from './DismissableDetails';
 
 function formatExpiry(value: string) {
-  return new Date(value).toLocaleDateString('en-GB', { timeZone: 'UTC' });
+  return new Date(value).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 }
 
 export default function VoiceRehearsalShare({ project, takes, sections }: { project: VoiceRehearsalProject; takes: VoiceRehearsalTake[]; sections: VoiceRehearsalSection[] }) {

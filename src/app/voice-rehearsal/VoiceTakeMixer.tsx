@@ -24,6 +24,7 @@ export default function VoiceTakeMixer({ takes }: { takes: VoiceRehearsalTake[] 
   const stopHandlerRef = useRef<(() => void) | null>(null);
   const releaseActivationRef = useRef<(() => void) | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingPhase, setLoadingPhase] = useState<'unlocking' | 'preparing' | 'starting' | null>(null);
   const [playing, setPlaying] = useState(false);
   const [loadedCount, setLoadedCount] = useState(0);
   const [position, setPosition] = useState(0);
@@ -55,6 +56,7 @@ export default function VoiceTakeMixer({ takes }: { takes: VoiceRehearsalTake[] 
     stopHandlerRef.current = null;
     clearScheduledPlayback();
     setLoading(false);
+    setLoadingPhase(null);
     setPlaying(false);
     setPosition(0);
   }
@@ -200,14 +202,17 @@ export default function VoiceTakeMixer({ takes }: { takes: VoiceRehearsalTake[] 
     stopHandlerRef.current = stopHandler;
     registerVoiceMixStopper(stopHandler);
     setLoading(true);
+    setLoadingPhase('unlocking');
     try {
       const context = getSharedVoiceAudioContext();
-      // Unlock Web Audio in the tap and keep its silent source alive while
+      // Unlock Web Audio in the tap and keep its near-silent source alive while
       // missing takes download/decode. This prevents iOS PWAs from pausing the
       // output between the gesture and the first scheduled voice source.
       const activation = activateVoiceAudioFromGesture(context);
       releaseActivationRef.current = activation.release;
       await waitForAudioContext(context, activation.resumePromise);
+      if (requestId !== playRequestRef.current) return;
+      setLoadingPhase('preparing');
       const buffers = await getBuffers(context);
       if (requestId !== playRequestRef.current) return;
       if (takes.length === 0) return;
@@ -226,6 +231,9 @@ export default function VoiceTakeMixer({ takes }: { takes: VoiceRehearsalTake[] 
       setDuration(totalDuration);
       const startPosition = Math.min(requestedStart, totalDuration);
       setPosition(startPosition);
+      setLoadingPhase('starting');
+      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+      if (requestId !== playRequestRef.current) return;
       startSourcesAt(context, startPosition, totalDuration);
       activation.release();
       if (releaseActivationRef.current === activation.release) releaseActivationRef.current = null;
@@ -235,7 +243,10 @@ export default function VoiceTakeMixer({ takes }: { takes: VoiceRehearsalTake[] 
         setError(cause instanceof Error ? cause.message : 'The parts could not be mixed in this browser.');
       }
     } finally {
-      if (requestId === playRequestRef.current) setLoading(false);
+      if (requestId === playRequestRef.current) {
+        setLoading(false);
+        setLoadingPhase(null);
+      }
     }
   }
 
@@ -274,7 +285,16 @@ export default function VoiceTakeMixer({ takes }: { takes: VoiceRehearsalTake[] 
         </div>
       </div>
       {(loading || loadedCount > 0) && (
-        <p role="status" className="mt-3 text-xs text-slate-500 dark:text-slate-400">{loading ? `Preparing ${takes.length} parts…` : `${loadedCount} part${loadedCount === 1 ? '' : 's'} decoded and cached for this session`}</p>
+        <p role="status" aria-live="polite" className="mt-3 inline-flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+          {loading && <span aria-hidden="true" className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-r-transparent" />}
+          {loading
+            ? loadingPhase === 'unlocking'
+              ? 'Starting playback… Waking the audio engine.'
+              : loadingPhase === 'starting'
+                ? `All ${takes.length} parts are ready. Starting together…`
+                : `Starting playback… ${loadedCount} of ${takes.length} parts ready.`
+            : `${loadedCount} part${loadedCount === 1 ? '' : 's'} decoded and cached for this session`}
+        </p>
       )}
       {duration > 0 && (
         <div className="mt-4 flex items-center gap-3">

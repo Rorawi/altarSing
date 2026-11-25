@@ -169,7 +169,7 @@ export default function VoiceRehearsalProjectClient({
       <header className="mb-7 flex items-start justify-between gap-3 border-b border-slate-200 pb-5 dark:border-slate-800">
         <div className="min-w-0">
           <h1 className="break-words font-serif text-2xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-3xl">{project.title}</h1>
-          <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">Voice rehearsal project{project.bpm ? ` · ${project.bpm} BPM` : ''} · expires {new Date(project.expires_at).toLocaleDateString()}</p>
+          <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">Voice rehearsal project{project.bpm ? ` · ${project.bpm} BPM` : ''} · expires {new Date(project.expires_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })}</p>
         </div>
         {isAdmin ? (
           <DeleteVoiceRehearsalButton projectId={project.id} title={project.title} redirectTo="/voice-rehearsal" />

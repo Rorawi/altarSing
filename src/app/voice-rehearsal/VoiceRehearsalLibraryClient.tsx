@@ -143,7 +143,7 @@ export default function VoiceRehearsalLibraryClient({
                 <span className="min-w-0">
                   <span className="block break-words font-serif text-lg font-medium text-slate-900 group-hover:text-violet-900 dark:text-slate-100 dark:group-hover:text-violet-200">{project.title}</span>
                   <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
-                    {project.bpm ? `${project.bpm} BPM · ` : ''}Expires {new Date(project.expires_at).toLocaleDateString()}
+                    {project.bpm ? `${project.bpm} BPM · ` : ''}Expires {new Date(project.expires_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })}
                   </span>
                 </span>
                 <span className="flex shrink-0 items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300">Open <Icon name="chevron-right" size={16} /></span>
