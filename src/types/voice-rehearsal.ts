@@ -6,10 +6,20 @@ export interface VoiceRehearsalProject {
   expires_at: string;
 }
 
+export interface VoiceRehearsalSection {
+  id: string;
+  project_id: string;
+  name: string;
+  position: number;
+  created_at: string;
+}
+
 export interface VoiceRehearsalTake {
   id: string;
   project_id: string;
+  section_id?: string | null;
   part_label: string;
+  line_label?: string | null;
   mime_type: 'audio/webm' | 'audio/mp4';
   duration_seconds: number;
   offset_ms: number;

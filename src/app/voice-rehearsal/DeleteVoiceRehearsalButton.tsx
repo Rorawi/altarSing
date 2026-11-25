@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Icon from '@/components/Icon';
+import DismissableDetails from './DismissableDetails';
 
 export default function DeleteVoiceRehearsalButton({
   projectId,
@@ -37,14 +38,21 @@ export default function DeleteVoiceRehearsalButton({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => { setError(''); setConfirming(true); }}
-        className="button-danger-quiet"
-        aria-label={`Delete ${title} rehearsal`}
-      >
-        <Icon name="trash" size={16} />Delete
-      </button>
+      <DismissableDetails className="relative shrink-0">
+        <summary className="details-summary icon-button min-h-11 min-w-11 cursor-pointer focus-visible:ring-2 focus-visible:ring-violet-600 sm:min-h-0 sm:min-w-0" aria-label={`More actions for ${title}`} title="More actions">
+          <Icon name="more-horizontal" size={20} />
+        </summary>
+        <div className="popover-surface absolute right-0 top-full z-30 mt-1 min-w-48 max-w-[calc(100vw-2rem)] rounded-md p-1">
+          <button
+            type="button"
+            onClick={(event) => { event.currentTarget.closest('details')?.removeAttribute('open'); setError(''); setConfirming(true); }}
+            className="flex min-h-10 w-full items-center gap-2 rounded px-3 py-2 text-left text-sm text-red-700 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/40"
+            aria-label={`Delete ${title} rehearsal`}
+          >
+            <Icon name="trash" size={16} />Delete rehearsal
+          </button>
+        </div>
+      </DismissableDetails>
       {confirming && (
         <div
           className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-950/55 p-0 sm:items-center sm:p-4"

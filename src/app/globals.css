@@ -93,6 +93,14 @@
     @apply overflow-hidden border border-slate-200 bg-[#fbfaf7] shadow-lg dark:border-slate-700 dark:bg-slate-900;
   }
 
+  .details-summary {
+    list-style: none;
+  }
+
+  .details-summary::-webkit-details-marker {
+    display: none;
+  }
+
   .popover-action {
     @apply flex w-full items-center px-3 py-2.5 text-left text-sm text-slate-700 transition-colors hover:bg-stone-100 dark:text-slate-200 dark:hover:bg-slate-800;
   }

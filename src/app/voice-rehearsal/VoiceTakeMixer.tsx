@@ -22,6 +22,7 @@ export default function VoiceTakeMixer({ takes }: { takes: VoiceRehearsalTake[] 
   const timerRef = useRef<number | null>(null);
   const playRequestRef = useRef(0);
   const stopHandlerRef = useRef<(() => void) | null>(null);
+  const releaseActivationRef = useRef<(() => void) | null>(null);
   const [loading, setLoading] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [loadedCount, setLoadedCount] = useState(0);
@@ -48,6 +49,8 @@ export default function VoiceTakeMixer({ takes }: { takes: VoiceRehearsalTake[] 
 
   function stopPlayback() {
     playRequestRef.current += 1;
+    releaseActivationRef.current?.();
+    releaseActivationRef.current = null;
     if (stopHandlerRef.current) unregisterVoiceMixStopper(stopHandlerRef.current);
     stopHandlerRef.current = null;
     clearScheduledPlayback();
@@ -57,6 +60,8 @@ export default function VoiceTakeMixer({ takes }: { takes: VoiceRehearsalTake[] 
   }
 
   useEffect(() => () => {
+    releaseActivationRef.current?.();
+    releaseActivationRef.current = null;
     if (stopHandlerRef.current) unregisterVoiceMixStopper(stopHandlerRef.current);
     if (timerRef.current !== null) window.clearInterval(timerRef.current);
     for (const source of sourcesRef.current) {
@@ -197,9 +202,12 @@ export default function VoiceTakeMixer({ takes }: { takes: VoiceRehearsalTake[] 
     setLoading(true);
     try {
       const context = getSharedVoiceAudioContext();
-      // Call both start() and resume() synchronously from the Play all tap so
-      // iOS PWAs activate the Web Audio output before the network/decode awaits.
-      await waitForAudioContext(context, activateVoiceAudioFromGesture(context));
+      // Unlock Web Audio in the tap and keep its silent source alive while
+      // missing takes download/decode. This prevents iOS PWAs from pausing the
+      // output between the gesture and the first scheduled voice source.
+      const activation = activateVoiceAudioFromGesture(context);
+      releaseActivationRef.current = activation.release;
+      await waitForAudioContext(context, activation.resumePromise);
       const buffers = await getBuffers(context);
       if (requestId !== playRequestRef.current) return;
       if (takes.length === 0) return;
@@ -219,6 +227,8 @@ export default function VoiceTakeMixer({ takes }: { takes: VoiceRehearsalTake[] 
       const startPosition = Math.min(requestedStart, totalDuration);
       setPosition(startPosition);
       startSourcesAt(context, startPosition, totalDuration);
+      activation.release();
+      if (releaseActivationRef.current === activation.release) releaseActivationRef.current = null;
     } catch (cause) {
       if (requestId === playRequestRef.current) {
         stopPlayback();
@@ -252,12 +262,15 @@ export default function VoiceTakeMixer({ takes }: { takes: VoiceRehearsalTake[] 
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Combined playback with saved timing adjustments. Tap or drag the waveform to seek.</p>
         </div>
         <div className="flex shrink-0 gap-2">
-          <button type="button" onClick={playAll} disabled={loading || playing} className="button-primary">
-            <Icon name="play" size={16} />{loading ? 'Loading parts…' : 'Play all'}
-          </button>
-          <button type="button" onClick={stopPlayback} disabled={!playing} className="button-secondary">
-            <span className="h-3 w-3 bg-slate-500" />Stop
-          </button>
+          {playing || loading ? (
+            <button type="button" onClick={stopPlayback} className="button-secondary">
+              <span className="h-3 w-3 bg-slate-500" />{loading ? 'Cancel' : 'Stop'}
+            </button>
+          ) : (
+            <button type="button" onClick={playAll} className="button-primary">
+              <Icon name="play" size={16} />Play all
+            </button>
+          )}
         </div>
       </div>
       {(loading || loadedCount > 0) && (

@@ -27,6 +27,7 @@ export type IconName =
   | 'sun'
   | 'moon'
   | 'menu'
+  | 'more-horizontal'
   | 'arrow-left'
   | 'lyrics'
   | 'microphone'
@@ -65,6 +66,7 @@ const paths: Record<IconName, ReactNode> = {
   sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></>,
   moon: <path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z" />,
   menu: <><path d="M4 6h16M4 12h16M4 18h16" /></>,
+  'more-horizontal': <><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></>,
   'arrow-left': <><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></>,
   lyrics: <><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" /><path d="M8 7h8M8 11h8" /></>,
   microphone: <><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 10a7 7 0 0 0 14 0M12 17v5m-4 0h8" /></>,

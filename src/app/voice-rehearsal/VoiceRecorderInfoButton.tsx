@@ -64,6 +64,10 @@ export default function VoiceRecorderInfoButton() {
                 <dd className="mt-1 text-slate-600 dark:text-slate-300">Keep the microphone uncovered and about a hand-span away. Wired headphones usually add less delay than Bluetooth.</dd>
               </div>
               <div>
+                <dt className="font-medium text-slate-800 dark:text-slate-100">Voice group and singing line</dt>
+                <dd className="mt-1 text-slate-600 dark:text-slate-300">In extra song sections, keep the choir group name and set the line it sings separately, such as Soprano → Tenor line.</dd>
+              </div>
+              <div>
                 <dt className="font-medium text-slate-800 dark:text-slate-100">Recording gain</dt>
                 <dd className="mt-1 text-slate-600 dark:text-slate-300">Raise gain if your voice is quiet. Keep the level meter out of the red; red means the recording may distort.</dd>
               </div>

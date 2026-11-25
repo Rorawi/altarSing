@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import Icon from '@/components/Icon';
-import { getSharedVoiceAudioContext } from './VoiceAudioEngine';
+import { decodeVoiceTakeForWaveform } from './VoiceAudioEngine';
 import VoiceWaveformSeek from './VoiceWaveformSeek';
 
 const WAVEFORM_BARS = 76;
 
 export default function VoiceWaveformPlayer({
+  takeId,
   src,
   waveformSrc,
   durationSeconds,
@@ -16,6 +17,7 @@ export default function VoiceWaveformPlayer({
   diagnosticUrl,
   audioRef,
 }: {
+  takeId?: string;
   src: string;
   waveformSrc: string;
   durationSeconds: number;
@@ -43,8 +45,7 @@ export default function VoiceWaveformPlayer({
           const result = await response.json().catch(() => null) as { error?: string } | null;
           throw new Error(result?.error ?? 'The recording waveform could not be loaded.');
         }
-        const context = getSharedVoiceAudioContext();
-        const decoded = await context.decodeAudioData(await response.arrayBuffer());
+        const decoded = await decodeVoiceTakeForWaveform(takeId ?? waveformSrc, await response.arrayBuffer());
         const channelCount = decoded.numberOfChannels;
         const frameCount = decoded.length;
         const stride = Math.max(1, Math.floor(frameCount / WAVEFORM_BARS));
@@ -79,7 +80,7 @@ export default function VoiceWaveformPlayer({
     }
     void loadWaveform();
     return () => { active = false; controller.abort(); };
-  }, [waveformSrc]);
+  }, [takeId, waveformSrc]);
 
   function syncAudioState() {
     const audio = playerRef.current;

@@ -38,16 +38,21 @@ type CaptureDiagnostics = {
 
 export default function VoiceTakeRecorder({
   project,
+  sectionId,
+  showSungLine = false,
   backingTakes,
   onSaved,
 }: {
   project: VoiceRehearsalProject;
+  sectionId?: string | null;
+  showSungLine?: boolean;
   backingTakes: VoiceRehearsalTake[];
   onSaved: () => void;
 }) {
   const [mode, setModeState] = useState<RecorderMode>('ready');
   const modeRef = useRef<RecorderMode>('ready');
   const [partLabel, setPartLabel] = useState('Soprano');
+  const [lineLabel, setLineLabel] = useState('Soprano');
   const [tempo, setTempo] = useState(() => Math.max(MIN_TEMPO_BPM, Math.min(MAX_TEMPO_BPM, project.bpm ?? 120)));
   const [tempoInput, setTempoInput] = useState(() => String(Math.max(MIN_TEMPO_BPM, Math.min(MAX_TEMPO_BPM, project.bpm ?? 120))));
   const [tapCount, setTapCount] = useState(0);
@@ -70,6 +75,7 @@ export default function VoiceTakeRecorder({
   const [preparationStatus, setPreparationStatus] = useState('');
   const [diagnostics, setDiagnostics] = useState<CaptureDiagnostics | null>(null);
   const [diagnosticsCopyStatus, setDiagnosticsCopyStatus] = useState('');
+  const [recordingSetupOpen, setRecordingSetupOpen] = useState(false);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -704,6 +710,8 @@ export default function VoiceTakeRecorder({
     const formData = new FormData();
     formData.append('audio', audioFile);
     formData.append('partLabel', partLabel.trim());
+    formData.append('lineLabel', (lineLabel.trim() || partLabel.trim()));
+    if (sectionId) formData.append('sectionId', sectionId);
     formData.append('durationSeconds', String(takeRef.current.durationSeconds));
     formData.append('offsetMs', String(takeRef.current.offsetMs));
 
@@ -739,33 +747,23 @@ export default function VoiceTakeRecorder({
         <p><span className="font-semibold">Use headphones while recording</span> to keep backing audio out of the mic.</p>
       </div>
 
-      <div className="border-y border-slate-200 py-3 dark:border-slate-800">
-        <div className="flex items-center justify-between gap-4">
-          <label htmlFor="voice-recording-gain" className="text-sm font-medium text-slate-800 dark:text-slate-100">Recording gain</label>
-          <output htmlFor="voice-recording-gain" className="font-mono text-sm tabular-nums text-slate-600 dark:text-slate-300">+{recordingGainDb} dB</output>
-        </div>
-        <input
-          id="voice-recording-gain"
-          type="range"
-          min={0}
-          max={12}
-          step={1}
-          value={recordingGainDb}
-          onChange={(event) => setRecordingGainDb(Number(event.target.value))}
-          disabled={(mode !== 'ready' && mode !== 'review') || capturingPattern}
-          className="mt-2 w-full accent-violet-800"
-          aria-label="Recording gain in decibels"
-        />
-      </div>
-
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_11rem] sm:items-end">
         <label className="block text-xs font-medium text-slate-600 dark:text-slate-400">
-          Voice part
-          <input list="voice-part-labels" value={partLabel} onChange={(event) => setPartLabel(event.target.value)} disabled={mode !== 'ready' && mode !== 'review'} className="field-control mt-1" placeholder="e.g. Soprano or Lead" />
+          {showSungLine ? 'Voice group' : 'Voice part'}
+          <input list="voice-part-labels" value={partLabel} onChange={(event) => { const nextLabel = event.target.value; setPartLabel(nextLabel); if (lineLabel === partLabel) setLineLabel(nextLabel); }} disabled={mode !== 'ready' && mode !== 'review'} className="field-control mt-1" placeholder="e.g. Soprano or Lead" />
           <datalist id="voice-part-labels">
             <option value="Soprano" /><option value="Alto" /><option value="Tenor" /><option value="Bass" /><option value="Lead" /><option value="Beatbox" />
           </datalist>
         </label>
+        {showSungLine && (
+          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400">
+            Singing line
+            <input list="voice-line-labels" value={lineLabel} onChange={(event) => setLineLabel(event.target.value)} disabled={mode !== 'ready' && mode !== 'review'} className="field-control mt-1" placeholder="e.g. Tenor line" />
+            <datalist id="voice-line-labels">
+              <option value="Soprano" /><option value="Alto" /><option value="Tenor" /><option value="Bass" /><option value="Lead" />
+            </datalist>
+          </label>
+        )}
         <label className="block text-xs font-medium text-slate-600 dark:text-slate-400">
           Tempo · BPM
           <input
@@ -793,49 +791,101 @@ export default function VoiceTakeRecorder({
         </label>
       </div>
 
-      <div className="border-y border-slate-200 py-3 dark:border-slate-800">
-        <div className="flex flex-wrap items-center gap-2">
-          {!capturingPattern ? (
-            <button type="button" onClick={startTapPattern} disabled={mode !== 'ready'} className="button-secondary">
-              <span aria-hidden="true" className="font-serif text-lg leading-none">♩</span>{tapPattern ? 'Record rhythm again' : 'Start on downbeat'}
-            </button>
-          ) : (
-            <>
-              <button type="button" onClick={tapPatternBeat} disabled={mode !== 'ready' || tapCount >= 16} className="button-primary">
-                <span aria-hidden="true" className="font-serif text-lg leading-none">♩</span>Tap audible hit
-              </button>
-              <button type="button" onClick={finishTapPattern} disabled={tapCount < 3} className="button-secondary">Mark next downbeat</button>
-              <button type="button" onClick={cancelTapPattern} className="button-quiet">Cancel</button>
-            </>
-          )}
-          <button type="button" onClick={previewBeat} disabled={mode !== 'ready' || capturingPattern} className="button-quiet">
-            <Icon name="play" size={16} />Preview rhythm
-          </button>
-          {!capturingPattern && tapPattern && <span className="font-mono text-xs tabular-nums text-slate-500 dark:text-slate-400">{tapPattern.hitsMs.length} hits · {formatDuration(tapPattern.loopDurationMs / 1000)} loop</span>}
-        </div>
-        {tapTempoNotice && <p aria-live="polite" className="mt-2 text-sm text-slate-600 dark:text-slate-300">{tapTempoNotice}</p>}
-      </div>
+      <details
+        className="border-y border-slate-200 py-3 dark:border-slate-800"
+        open={recordingSetupOpen || capturingPattern}
+        onToggle={(event) => { if (!capturingPattern) setRecordingSetupOpen(event.currentTarget.open); }}
+      >
+        <summary className="details-summary flex cursor-pointer items-center justify-between gap-4 text-sm font-medium text-slate-700 dark:text-slate-200">
+          <span>Recording setup</span>
+          <span className="inline-flex items-center gap-2 text-right text-xs font-normal text-slate-500 dark:text-slate-400">+{recordingGainDb} dB · {countInMode === 'none' ? 'No count-in' : countInMode === 'rhythm' ? 'Rhythm count-in' : '3-second count-in'}<Icon name="chevron-down" size={15} /></span>
+        </summary>
+        <div className="mt-4 space-y-5">
+          <div>
+            <div className="flex items-center justify-between gap-4">
+              <label htmlFor="voice-recording-gain" className="text-sm font-medium text-slate-800 dark:text-slate-100">Recording gain</label>
+              <output htmlFor="voice-recording-gain" className="font-mono text-sm tabular-nums text-slate-600 dark:text-slate-300">+{recordingGainDb} dB</output>
+            </div>
+            <input
+              id="voice-recording-gain"
+              type="range"
+              min={0}
+              max={12}
+              step={1}
+              value={recordingGainDb}
+              onChange={(event) => setRecordingGainDb(Number(event.target.value))}
+              disabled={(mode !== 'ready' && mode !== 'review') || capturingPattern}
+              className="mt-2 w-full accent-violet-800"
+              aria-label="Recording gain in decibels"
+            />
+          </div>
 
-      <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
-        <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-          <span>Count-in</span>
-          <select value={countInMode} onChange={(event) => setCountInMode(event.target.value as CountInMode)} disabled={mode !== 'ready' || capturingPattern} className="field-control min-h-9 w-auto py-1">
-            <option value="none">Off</option>
-            <option value="seconds">3 seconds</option>
-            <option value="rhythm" disabled={!tapPattern}>One captured loop</option>
-          </select>
-        </label>
-        {backingTakes.length > 0 && (
-          <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-            <input type="checkbox" checked={backingEnabled} onChange={(event) => setBackingEnabled(event.target.checked)} disabled={mode !== 'ready'} className="accent-violet-800" />
-            Play existing parts while recording
-          </label>
-        )}
-        <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-          <input type="checkbox" checked={metronomeEnabled} onChange={(event) => setMetronomeEnabled(event.target.checked)} disabled={mode !== 'ready'} className="accent-violet-800" />
-          Metronome at this tempo during recording
-        </label>
-      </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {!capturingPattern ? (
+              <button type="button" onClick={startTapPattern} disabled={mode !== 'ready'} className="button-secondary">
+                <span aria-hidden="true" className="font-serif text-lg leading-none">♩</span>{tapPattern ? 'Record rhythm again' : 'Tap in a rhythm'}
+              </button>
+            ) : (
+              <>
+                <button type="button" onClick={tapPatternBeat} disabled={mode !== 'ready' || tapCount >= 16} className="button-primary">
+                  <span aria-hidden="true" className="font-serif text-lg leading-none">♩</span>Tap audible hit
+                </button>
+                <button type="button" onClick={finishTapPattern} disabled={tapCount < 3} className="button-secondary">Mark next downbeat</button>
+                <button type="button" onClick={cancelTapPattern} className="button-quiet">Cancel</button>
+              </>
+            )}
+            <button type="button" onClick={previewBeat} disabled={mode !== 'ready' || capturingPattern} className="button-quiet">
+              <Icon name="play" size={16} />Preview rhythm
+            </button>
+            {!capturingPattern && tapPattern && <span className="font-mono text-xs tabular-nums text-slate-500 dark:text-slate-400">{tapPattern.hitsMs.length} hits · {formatDuration(tapPattern.loopDurationMs / 1000)} loop</span>}
+          </div>
+          {tapTempoNotice && <p aria-live="polite" className="text-sm text-slate-600 dark:text-slate-300">{tapTempoNotice}</p>}
+
+          <div className="flex flex-wrap gap-x-5 gap-y-3 border-t border-slate-200 pt-4 text-sm dark:border-slate-800">
+            <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+              <span>Count-in</span>
+              <select value={countInMode} onChange={(event) => setCountInMode(event.target.value as CountInMode)} disabled={mode !== 'ready' || capturingPattern} className="field-control min-h-9 w-auto py-1">
+                <option value="none">Off</option>
+                <option value="seconds">3 seconds</option>
+                <option value="rhythm" disabled={!tapPattern}>One captured loop</option>
+              </select>
+            </label>
+            {backingTakes.length > 0 && (
+              <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                <input type="checkbox" checked={backingEnabled} onChange={(event) => setBackingEnabled(event.target.checked)} disabled={mode !== 'ready'} className="accent-violet-800" />
+                Play existing parts while recording
+              </label>
+            )}
+            <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+              <input type="checkbox" checked={metronomeEnabled} onChange={(event) => setMetronomeEnabled(event.target.checked)} disabled={mode !== 'ready'} className="accent-violet-800" />
+              Metronome at this tempo during recording
+            </label>
+          </div>
+          {diagnostics && (
+            <details className="border-t border-slate-200 pt-4 text-sm dark:border-slate-800">
+              <summary className="cursor-pointer font-medium text-slate-700 dark:text-slate-200">Audio timing diagnostics</summary>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">These are browser and device readings to help diagnose timing. The estimated playback adjustment is not a measurement of how the singing aligns.</p>
+              <dl className="mt-3 grid gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
+                <DiagnosticReading label="Microphone-reported latency" value={formatMilliseconds(diagnostics.inputLatencyMs)} />
+                <DiagnosticReading label="Recording gain" value={`+${diagnostics.recordingGainDb} dB`} />
+                <DiagnosticReading label="Audio output latency" value={formatMilliseconds(diagnostics.outputLatencyMs)} />
+                <DiagnosticReading label="Audio context base latency" value={formatMilliseconds(diagnostics.baseLatencyMs)} />
+                <DiagnosticReading label="Saved playback adjustment" value={formatSignedMilliseconds(diagnostics.estimatedOffsetMs)} />
+                <DiagnosticReading label="Input sample rate" value={diagnostics.inputSampleRate ? `${diagnostics.inputSampleRate} Hz` : 'Not reported'} />
+                <DiagnosticReading label="Audio context sample rate" value={`${diagnostics.contextSampleRate} Hz`} />
+                <DiagnosticReading label="Recorder start event delay" value={diagnostics.recorderStartEventDelayMs === null ? 'Waiting for start' : `${diagnostics.recorderStartEventDelayMs.toFixed(1)} ms`} />
+                <DiagnosticReading label="Take duration" value={diagnostics.takeDurationSeconds === null ? 'Recording' : formatDuration(diagnostics.takeDurationSeconds)} />
+              </dl>
+              <p className="mt-2 break-all text-[11px] text-slate-500 dark:text-slate-400">{diagnostics.browser}</p>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <button type="button" onClick={copyDiagnostics} className="button-secondary">Copy timing report</button>
+                {diagnosticsCopyStatus && <span role="status" className="text-xs text-slate-500 dark:text-slate-400">{diagnosticsCopyStatus}</span>}
+              </div>
+              <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">The start event delay measures when the browser delivered its event, not the exact first recorded audio sample.</p>
+            </details>
+          )}
+        </div>
+      </details>
 
       {mode === 'preparing' && (
         <div role="status" className="flex items-center justify-between gap-4 rounded-md border border-slate-200 px-4 py-3 text-sm dark:border-slate-800">
@@ -869,30 +919,6 @@ export default function VoiceTakeRecorder({
 
       {error && <p role="alert" className="text-sm text-red-700 dark:text-red-300">{error}</p>}
       {notice && <p role="status" className="border-l-2 border-amber-500 px-3 py-2 text-sm text-amber-900 dark:text-amber-200">{notice}</p>}
-
-      {diagnostics && (
-        <details className="border-y border-slate-200 py-3 dark:border-slate-800">
-          <summary className="cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-200">Audio timing diagnostics</summary>
-          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">These are browser and device readings to help diagnose timing. The estimated playback adjustment is not a measurement of how the singing aligns.</p>
-          <dl className="mt-3 grid gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
-            <DiagnosticReading label="Microphone-reported latency" value={formatMilliseconds(diagnostics.inputLatencyMs)} />
-            <DiagnosticReading label="Recording gain" value={`+${diagnostics.recordingGainDb} dB`} />
-            <DiagnosticReading label="Audio output latency" value={formatMilliseconds(diagnostics.outputLatencyMs)} />
-            <DiagnosticReading label="Audio context base latency" value={formatMilliseconds(diagnostics.baseLatencyMs)} />
-            <DiagnosticReading label="Saved playback adjustment" value={formatSignedMilliseconds(diagnostics.estimatedOffsetMs)} />
-            <DiagnosticReading label="Input sample rate" value={diagnostics.inputSampleRate ? `${diagnostics.inputSampleRate} Hz` : 'Not reported'} />
-            <DiagnosticReading label="Audio context sample rate" value={`${diagnostics.contextSampleRate} Hz`} />
-            <DiagnosticReading label="Recorder start event delay" value={diagnostics.recorderStartEventDelayMs === null ? 'Waiting for start' : `${diagnostics.recorderStartEventDelayMs.toFixed(1)} ms`} />
-            <DiagnosticReading label="Take duration" value={diagnostics.takeDurationSeconds === null ? 'Recording' : formatDuration(diagnostics.takeDurationSeconds)} />
-          </dl>
-          <p className="mt-2 break-all text-[11px] text-slate-500 dark:text-slate-400">{diagnostics.browser}</p>
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <button type="button" onClick={copyDiagnostics} className="button-secondary">Copy timing report</button>
-            {diagnosticsCopyStatus && <span role="status" className="text-xs text-slate-500 dark:text-slate-400">{diagnosticsCopyStatus}</span>}
-          </div>
-          <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">The start event delay measures when the browser delivered its event, not the exact first recorded audio sample.</p>
-        </details>
-      )}
 
       {mode === 'ready' && (
         <button type="button" onClick={startCapture} disabled={!partLabel.trim() || capturingPattern} className="button-primary min-w-40">

@@ -16,14 +16,26 @@ export function getSharedVoiceAudioContext() {
 }
 
 export function activateVoiceAudioFromGesture(context: AudioContext) {
-  // iOS home-screen apps can leave Web Audio suspended until playback is
-  // started directly from a tap. A silent one-sample source primes that path.
-  const source = context.createBufferSource();
-  source.buffer = context.createBuffer(1, 1, context.sampleRate);
-  source.connect(context.destination);
-  source.onended = () => source.disconnect();
-  source.start();
-  return context.resume();
+  // Keep a live, muted source connected while the first mix downloads and
+  // decodes. iOS PWAs can suspend an otherwise-unlocked context during that
+  // async gap if the only gesture-started source is a one-sample silent blip.
+  const oscillator = context.createOscillator();
+  const mute = context.createGain();
+  mute.gain.setValueAtTime(0, context.currentTime);
+  oscillator.connect(mute);
+  mute.connect(context.destination);
+  oscillator.start();
+
+  let released = false;
+  const release = () => {
+    if (released) return;
+    released = true;
+    try { oscillator.stop(); } catch { /* The activation source may have stopped already. */ }
+    oscillator.disconnect();
+    mute.disconnect();
+  };
+
+  return { resumePromise: context.resume(), release };
 }
 
 export function closeSharedVoiceAudioContext() {
@@ -45,6 +57,31 @@ export async function getDecodedVoiceTake(take: VoiceRehearsalTake, context: Aud
   }
   const decoded = await context.decodeAudioData(await audioResponse.arrayBuffer());
   decodedTakes.set(take.id, decoded);
+  return decoded;
+}
+
+export async function decodeVoiceTakeForWaveform(takeId: string, audioData: ArrayBuffer) {
+  const cached = decodedTakes.get(takeId);
+  if (cached) return cached;
+
+  const offlineWindow = window as typeof window & {
+    webkitOfflineAudioContext?: typeof OfflineAudioContext;
+  };
+  const OfflineContextConstructor = window.OfflineAudioContext || offlineWindow.webkitOfflineAudioContext;
+  let decoded: AudioBuffer;
+
+  if (OfflineContextConstructor) {
+    // Waveform rendering is analysis only; do not create the output context
+    // before the user's first playback gesture in an installed PWA.
+    const decoder = new OfflineContextConstructor(1, 128, 44_100);
+    decoded = await decoder.decodeAudioData(audioData);
+  } else {
+    // Older browsers can still draw the waveform, though their first-play
+    // context must be unlocked through the play control.
+    decoded = await getSharedVoiceAudioContext().decodeAudioData(audioData);
+  }
+
+  decodedTakes.set(takeId, decoded);
   return decoded;
 }
 
