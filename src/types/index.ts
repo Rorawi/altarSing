@@ -149,6 +149,18 @@ export interface CollectionWithSongs extends SongCollection {
   collection_songs: CollectionSong[];
 }
 
+// ─── VOCAL TRAINING ──────────────────────────────────────────────────────────
+
+export interface VocalTrainingResource {
+  id: string;
+  title: string;
+  url: string;
+  notes: string | null;
+  times_used: number;
+  created_at: string;
+  updated_at: string;
+}
+
 // Lightweight shape used in rehearsal song pickers
 export interface CollectionForPicker {
   id: string;

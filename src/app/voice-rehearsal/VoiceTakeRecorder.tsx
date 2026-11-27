@@ -3,13 +3,14 @@
 import { useEffect, useRef, useState } from 'react';
 import Icon from '@/components/Icon';
 import type { VoiceRehearsalProject, VoiceRehearsalTake } from '@/types/voice-rehearsal';
-import { getDecodedVoiceTake, getSharedVoiceAudioContext, stopActiveVoiceMix } from './VoiceAudioEngine';
+import { activateVoiceAudioFromGesture, getDecodedVoiceTake, getSharedVoiceAudioContext, stopActiveVoiceMix } from './VoiceAudioEngine';
 import VoiceWaveformPlayer from './VoiceWaveformPlayer';
 
 const MAX_TAKE_SECONDS = 10 * 60;
 const COUNT_IN_INTERVAL_MS = 1000;
 const MIN_TEMPO_BPM = 40;
 const MAX_TEMPO_BPM = 240;
+const AUDIO_RESUME_TIMEOUT_MS = 2500;
 
 type RecorderMode = 'ready' | 'preparing' | 'counting-in' | 'recording' | 'stopping' | 'review' | 'uploading';
 type CountInMode = 'none' | 'seconds' | 'rhythm';
@@ -81,6 +82,7 @@ export default function VoiceTakeRecorder({
   const streamRef = useRef<MediaStream | null>(null);
   const recordingStreamRef = useRef<MediaStream | null>(null);
   const contextRef = useRef<AudioContext | null>(null);
+  const releaseActivationRef = useRef<(() => void) | null>(null);
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const recordingGainRef = useRef<GainNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -108,6 +110,31 @@ export default function VoiceTakeRecorder({
     if (mountedRef.current) setModeState(next);
   }
 
+  function releaseAudioActivation() {
+    releaseActivationRef.current?.();
+    releaseActivationRef.current = null;
+  }
+
+  async function waitForAudioContext(context: AudioContext, resumePromise: Promise<void>) {
+    let timeoutId: number | null = null;
+    try {
+      await Promise.race([
+        resumePromise,
+        new Promise<void>((_, reject) => {
+          timeoutId = window.setTimeout(
+            () => reject(new Error('The recording audio did not start. Tap Start recording to try again.')),
+            AUDIO_RESUME_TIMEOUT_MS,
+          );
+        }),
+      ]);
+    } finally {
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+    }
+    if (context.state !== 'running') {
+      throw new Error('The recording audio is still paused. Tap Start recording to try again.');
+    }
+  }
+
   function clearTimers() {
     if (countInTimerRef.current !== null) window.clearTimeout(countInTimerRef.current);
     if (elapsedTimerRef.current !== null) window.clearInterval(elapsedTimerRef.current);
@@ -120,6 +147,7 @@ export default function VoiceTakeRecorder({
   }
 
   function releaseAudio() {
+    releaseAudioActivation();
     stopBackingPlayback();
     if (animationFrameRef.current !== null) cancelAnimationFrame(animationFrameRef.current);
     animationFrameRef.current = null;
@@ -228,31 +256,34 @@ export default function VoiceTakeRecorder({
   }
 
   function startTapPattern() {
-    const downbeatAt = performance.now();
-    patternStartedAtRef.current = downbeatAt;
-    tapTimesRef.current = [downbeatAt];
+    patternStartedAtRef.current = null;
+    tapTimesRef.current = [];
     setCapturingPattern(true);
-    setTapCount(1);
+    setTapCount(0);
     setError('');
-    setTapTempoNotice('Downbeat marked. Tap each following hit, then finish on the next downbeat; the pause before it is kept.');
+    setTapTempoNotice('Ready. Tap “Tap first beat” exactly when you hear the first sound. That tap starts the timing measurement.');
   }
 
   function tapPatternBeat() {
     if (!capturingPattern) return;
     if (tapTimesRef.current.length >= 16) {
-      setTapTempoNotice('That is the 16-hit limit. Finish the bar on its next downbeat.');
+      setTapTempoNotice('That is the 16-sound limit. Finish the pattern when the first sound repeats.');
       return;
     }
-    tapTimesRef.current = [...tapTimesRef.current, performance.now()];
+    const tappedAt = performance.now();
+    if (patternStartedAtRef.current === null) patternStartedAtRef.current = tappedAt;
+    tapTimesRef.current = [...tapTimesRef.current, tappedAt];
     setTapCount(tapTimesRef.current.length);
-    setTapTempoNotice(`${tapTimesRef.current.length} hits marked. Finish on the next downbeat; the gaps are kept as rests.`);
+    setTapTempoNotice(tapTimesRef.current.length === 1
+      ? 'First beat marked. Tap at least one more sound, then press “Finish on first beat” when the pattern repeats. Wait through any pauses.'
+      : `${tapTimesRef.current.length} sounds marked. Wait through any pauses, then press “Finish on first beat” when the pattern repeats.`);
   }
 
   function finishTapPattern() {
     if (!capturingPattern) return;
     const taps = tapTimesRef.current;
-    if (taps.length < 3) {
-      setTapTempoNotice('Tap at least three audible hits before closing the bar.');
+    if (taps.length < 2) {
+      setTapTempoNotice('Tap at least two sounds first. Then press “Finish on first beat” when the pattern repeats.');
       return;
     }
 
@@ -260,7 +291,7 @@ export default function VoiceTakeRecorder({
     if (patternStartedAt === null) return;
     const finishedAt = performance.now();
     const hitsMs = taps.map((tap) => tap - patternStartedAt);
-    const intervals = [...hitsMs.slice(1).map((tap, index) => tap - hitsMs[index]), finishedAt - taps[taps.length - 1]];
+    const intervals = [...taps.slice(1).map((tap, index) => tap - taps[index]), finishedAt - taps[taps.length - 1]];
     const sortedIntervals = [...intervals].sort((a, b) => a - b);
     const middle = Math.floor(sortedIntervals.length / 2);
     const median = sortedIntervals.length % 2
@@ -273,7 +304,7 @@ export default function VoiceTakeRecorder({
       tapTimesRef.current = [];
       patternStartedAtRef.current = null;
       setTapCount(0);
-      setTapTempoNotice('The measured pulse is outside 40–240 BPM. Start the bar again and retap it.');
+      setTapTempoNotice('The measured tempo is outside 40–240 beats per minute. Start a new pattern and try again.');
       return;
     }
     setTempo(measuredTempo);
@@ -285,7 +316,7 @@ export default function VoiceTakeRecorder({
     tapTimesRef.current = [];
     patternStartedAtRef.current = null;
     setCountInMode('rhythm');
-    setTapTempoNotice(`Bar captured · ${taps.length} audible hits · ${measuredTempo} BPM`);
+    setTapTempoNotice(`Beat saved · ${taps.length} sounds · ${measuredTempo} BPM`);
   }
 
   function cancelTapPattern() {
@@ -425,6 +456,7 @@ export default function VoiceTakeRecorder({
         stopCapture();
       }, MAX_TAKE_SECONDS * 1000);
       if (metronomeEnabled && pattern.hitsMs.length > 0 && contextRef.current) startMetronome(contextRef.current, pattern);
+      releaseAudioActivation();
     } catch {
       setError('Recording could not start on this browser. Try refreshing the page or using a different browser.');
       clearTimers();
@@ -470,8 +502,22 @@ export default function VoiceTakeRecorder({
     stopActiveVoiceMix();
     backingBuffersRef.current.clear();
     setMode('preparing');
-    setPreparationStatus('Requesting microphone access…');
+    setPreparationStatus('Starting audio engine…');
     try {
+      // Unlock the shared output context during the Start recording tap and
+      // keep it alive while iOS PWA microphone permission and audio decoding
+      // introduce asynchronous gaps before the backing tracks are scheduled.
+      const context = getSharedVoiceAudioContext();
+      contextRef.current = context;
+      const activation = activateVoiceAudioFromGesture(context);
+      releaseActivationRef.current = activation.release;
+      await waitForAudioContext(context, activation.resumePromise);
+      if (requestId !== captureRequestRef.current) {
+        releaseAudio();
+        return;
+      }
+
+      setPreparationStatus('Requesting microphone access…');
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           channelCount: { ideal: 1 },
@@ -487,9 +533,7 @@ export default function VoiceTakeRecorder({
       }
       streamRef.current = stream;
 
-      const context = getSharedVoiceAudioContext();
-      contextRef.current = context;
-      await context.resume();
+      if (context.state !== 'running') await waitForAudioContext(context, context.resume());
       if (requestId !== captureRequestRef.current) {
         releaseAudio();
         return;
@@ -505,6 +549,7 @@ export default function VoiceTakeRecorder({
           return;
         }
       }
+      if (context.state !== 'running') await waitForAudioContext(context, context.resume());
       setPreparationStatus('Starting recorder…');
       const source = context.createMediaStreamSource(stream);
       sourceRef.current = source;
@@ -765,7 +810,7 @@ export default function VoiceTakeRecorder({
           </label>
         )}
         <label className="block text-xs font-medium text-slate-600 dark:text-slate-400">
-          Tempo · BPM
+          Tempo · beats per minute
           <input
             type="number"
             min={MIN_TEMPO_BPM}
@@ -798,7 +843,7 @@ export default function VoiceTakeRecorder({
       >
         <summary className="details-summary flex cursor-pointer items-center justify-between gap-4 text-sm font-medium text-slate-700 dark:text-slate-200">
           <span>Recording setup</span>
-          <span className="inline-flex items-center gap-2 text-right text-xs font-normal text-slate-500 dark:text-slate-400">+{recordingGainDb} dB · {countInMode === 'none' ? 'No count-in' : countInMode === 'rhythm' ? 'Rhythm count-in' : '3-second count-in'}<Icon name="chevron-down" size={15} /></span>
+          <span className="inline-flex items-center gap-2 text-right text-xs font-normal text-slate-500 dark:text-slate-400">+{recordingGainDb} dB · {countInMode === 'none' ? 'No count-in' : countInMode === 'rhythm' ? 'Custom beat first' : '3-second countdown'}<Icon name="chevron-down" size={15} /></span>
         </summary>
         <div className="mt-4 space-y-5">
           <div>
@@ -820,47 +865,61 @@ export default function VoiceTakeRecorder({
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {!capturingPattern ? (
-              <button type="button" onClick={startTapPattern} disabled={mode !== 'ready'} className="button-secondary">
-                <span aria-hidden="true" className="font-serif text-lg leading-none">♩</span>{tapPattern ? 'Record rhythm again' : 'Tap in a rhythm'}
-              </button>
-            ) : (
-              <>
-                <button type="button" onClick={tapPatternBeat} disabled={mode !== 'ready' || tapCount >= 16} className="button-primary">
-                  <span aria-hidden="true" className="font-serif text-lg leading-none">♩</span>Tap audible hit
+          <div className="space-y-2">
+            <div>
+              <p className="text-sm font-medium text-slate-800 dark:text-slate-100">Make a beat (optional)</p>
+              <p className="mt-1 max-w-3xl text-sm text-slate-500 dark:text-slate-400">
+                Set the speed with Tempo above, or tap a rhythm to make a custom click pattern. Start tapping before the first sound; your first beat tap starts timing, so the button press itself won’t count.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {!capturingPattern ? (
+                <button type="button" onClick={startTapPattern} disabled={mode !== 'ready'} className="button-secondary">
+                  <span aria-hidden="true" className="font-serif text-lg leading-none">♩</span>{tapPattern ? 'Record a new beat' : 'Start tapping'}
                 </button>
-                <button type="button" onClick={finishTapPattern} disabled={tapCount < 3} className="button-secondary">Mark next downbeat</button>
-                <button type="button" onClick={cancelTapPattern} className="button-quiet">Cancel</button>
-              </>
-            )}
-            <button type="button" onClick={previewBeat} disabled={mode !== 'ready' || capturingPattern} className="button-quiet">
-              <Icon name="play" size={16} />Preview rhythm
-            </button>
-            {!capturingPattern && tapPattern && <span className="font-mono text-xs tabular-nums text-slate-500 dark:text-slate-400">{tapPattern.hitsMs.length} hits · {formatDuration(tapPattern.loopDurationMs / 1000)} loop</span>}
+              ) : (
+                <>
+                  <button type="button" onClick={tapPatternBeat} disabled={mode !== 'ready' || tapCount >= 16} className="button-primary">
+                    <span aria-hidden="true" className="font-serif text-lg leading-none">♩</span>{tapCount === 0 ? 'Tap first beat' : 'Tap next sound'}
+                  </button>
+                  <button type="button" onClick={finishTapPattern} disabled={tapCount < 2} className="button-secondary">Finish on first beat</button>
+                  <button type="button" onClick={cancelTapPattern} className="button-quiet">Cancel</button>
+                </>
+              )}
+              <button type="button" onClick={previewBeat} disabled={mode !== 'ready' || capturingPattern} className="button-quiet">
+                <Icon name="play" size={16} />Hear the beat
+              </button>
+              {!capturingPattern && tapPattern && <span className="font-mono text-xs tabular-nums text-slate-500 dark:text-slate-400">{tapPattern.hitsMs.length} taps · {formatDuration(tapPattern.loopDurationMs / 1000)} pattern</span>}
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {tapPattern
+                ? '“Hear the beat” plays your pattern twice. “Play custom beat once” uses it as a lead-in before recording.'
+                : '“Hear the beat” previews four even clicks at your tempo. Press “Start tapping” to make your own pattern.'}
+            </p>
           </div>
           {tapTempoNotice && <p aria-live="polite" className="text-sm text-slate-600 dark:text-slate-300">{tapTempoNotice}</p>}
 
           <div className="flex flex-wrap gap-x-5 gap-y-3 border-t border-slate-200 pt-4 text-sm dark:border-slate-800">
             <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-              <span>Count-in</span>
+              <span>Before recording</span>
               <select value={countInMode} onChange={(event) => setCountInMode(event.target.value as CountInMode)} disabled={mode !== 'ready' || capturingPattern} className="field-control min-h-9 w-auto py-1">
                 <option value="none">Off</option>
-                <option value="seconds">3 seconds</option>
-                <option value="rhythm" disabled={!tapPattern}>One captured loop</option>
+                <option value="seconds">3-second countdown</option>
+                <option value="rhythm" disabled={!tapPattern}>Play custom beat once</option>
               </select>
             </label>
             {backingTakes.length > 0 && (
               <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                 <input type="checkbox" checked={backingEnabled} onChange={(event) => setBackingEnabled(event.target.checked)} disabled={mode !== 'ready'} className="accent-violet-800" />
-                Play existing parts while recording
+                Play recorded parts as backing
               </label>
             )}
             <label className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
               <input type="checkbox" checked={metronomeEnabled} onChange={(event) => setMetronomeEnabled(event.target.checked)} disabled={mode !== 'ready'} className="accent-violet-800" />
-              Metronome at this tempo during recording
+              Hear the beat while recording
             </label>
           </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400">The first option is a lead-in before the take. Turn on the last option to keep clicks going while you record.</p>
           {diagnostics && (
             <details className="border-t border-slate-200 pt-4 text-sm dark:border-slate-800">
               <summary className="cursor-pointer font-medium text-slate-700 dark:text-slate-200">Audio timing diagnostics</summary>

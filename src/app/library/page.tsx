@@ -2,16 +2,17 @@ import { Suspense } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import SongLibraryClient from './SongLibraryClient';
 import { SkeletonLibraryPage } from '@/components/SkeletonLoaders';
-import type { CollectionWithSongs } from '@/types';
+import type { CollectionWithSongs, VocalTrainingResource } from '@/types';
 
 async function LibraryContent() {
   const supabase = await createClient();
-  const [{ data: songs, error }, { data: collectionsRaw }] = await Promise.all([
+  const [{ data: songs, error }, { data: collectionsRaw }, { data: trainingResources, error: trainingError }] = await Promise.all([
     supabase.from('songs').select('*').order('created_at', { ascending: false }),
     supabase
       .from('collections')
       .select('*, collection_songs(*)')
       .order('name'),
+    supabase.from('vocal_training_resources').select('*').order('created_at', { ascending: false }),
   ]);
 
   if (error) {
@@ -27,6 +28,8 @@ async function LibraryContent() {
     <SongLibraryClient
       initialSongs={songs ?? []}
       initialCollections={(collectionsRaw ?? []) as CollectionWithSongs[]}
+      initialTrainingResources={(trainingResources ?? []) as VocalTrainingResource[]}
+      trainingResourcesError={trainingError?.message ?? null}
     />
   );
 }

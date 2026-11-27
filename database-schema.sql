@@ -269,6 +269,36 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_collection_songs_unique_song
 -- Optional lyrics per collection song entry (used for unlinked/manual songs)
 ALTER TABLE collection_songs ADD COLUMN IF NOT EXISTS lyrics TEXT;
 
+-- Shared vocal-training links and a simple choir-use counter.
+CREATE TABLE IF NOT EXISTS vocal_training_resources (
+  id          UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+  title       TEXT        NOT NULL,
+  url         TEXT        NOT NULL,
+  notes       TEXT,
+  times_used  INTEGER     NOT NULL DEFAULT 0 CHECK (times_used >= 0),
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE vocal_training_resources ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all on vocal_training_resources"
+  ON vocal_training_resources FOR ALL USING (true) WITH CHECK (true);
+
+CREATE OR REPLACE FUNCTION public.increment_vocal_training_resource_use(target_resource_id UUID)
+RETURNS INTEGER
+LANGUAGE SQL
+SECURITY INVOKER
+SET search_path = public
+AS $$
+  UPDATE public.vocal_training_resources
+  SET times_used = times_used + 1,
+      updated_at = NOW()
+  WHERE id = target_resource_id
+  RETURNING times_used;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.increment_vocal_training_resource_use(UUID) TO anon, authenticated;
+
 -- =====================================================
 -- Migration: Medley Leaders
 -- Run this AFTER the migrations above

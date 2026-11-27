@@ -805,3 +805,71 @@ export async function updateCollectionSongLyrics(collectionSongId: string, lyric
   }
   revalidatePath('/library');
 }
+
+// ─── VOCAL TRAINING ──────────────────────────────────────────────────────────
+
+function normalizeTrainingUrl(rawUrl: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl.trim());
+  } catch {
+    throw new Error('Enter a valid link, including https://');
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error('Use a web link that starts with http:// or https://');
+  }
+  return parsed.toString();
+}
+
+export async function createVocalTrainingResource(input: {
+  title: string;
+  url: string;
+  notes: string | null;
+}): Promise<void> {
+  const title = input.title.trim();
+  if (!title) throw new Error('Add a title for this training resource.');
+  const supabase = await createClient();
+  const { error } = await supabase.from('vocal_training_resources').insert({
+    title,
+    url: normalizeTrainingUrl(input.url),
+    notes: input.notes?.trim() || null,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath('/library');
+}
+
+export async function updateVocalTrainingResource(
+  id: string,
+  input: { title: string; url: string; notes: string | null },
+): Promise<void> {
+  const title = input.title.trim();
+  if (!title) throw new Error('Add a title for this training resource.');
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('vocal_training_resources')
+    .update({
+      title,
+      url: normalizeTrainingUrl(input.url),
+      notes: input.notes?.trim() || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/library');
+}
+
+export async function deleteVocalTrainingResource(id: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.from('vocal_training_resources').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/library');
+}
+
+export async function incrementVocalTrainingResourceUse(id: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc('increment_vocal_training_resource_use', {
+    target_resource_id: id,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath('/library');
+}

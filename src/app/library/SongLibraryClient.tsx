@@ -3,22 +3,27 @@
 import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import type { Song, SortOption, CollectionWithSongs } from '@/types';
+import type { Song, SortOption, CollectionWithSongs, VocalTrainingResource } from '@/types';
 import { SONG_CATEGORIES, MUSICAL_KEYS } from '@/lib/constants';
 import SongCard from '@/components/SongCard';
 import CollectionsClient from './CollectionsClient';
 import { addSongToCollection } from '@/lib/actions';
 import PageHeader from '@/components/PageHeader';
 import Icon from '@/components/Icon';
+import VocalTrainingClient from './VocalTrainingClient';
 
 export default function SongLibraryClient({
   initialSongs,
   initialCollections,
+  initialTrainingResources,
+  trainingResourcesError,
 }: {
   initialSongs: Song[];
   initialCollections: CollectionWithSongs[];
+  initialTrainingResources: VocalTrainingResource[];
+  trainingResourcesError: string | null;
 }) {
-  const [activeTab, setActiveTab] = useState<'songs' | 'collections'>('songs');
+  const [activeTab, setActiveTab] = useState<'songs' | 'collections' | 'vocal-training'>('songs');
   const [addToCollectionSong, setAddToCollectionSong] = useState<Song | null>(null);
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
@@ -61,7 +66,11 @@ export default function SongLibraryClient({
     <div>
       <PageHeader
         title="Song library"
-        description={<>{initialSongs.length} song{initialSongs.length !== 1 ? 's' : ''}{hasFilters && activeTab === 'songs' ? ` · ${filtered.length} shown` : ''}</>}
+        description={activeTab === 'songs'
+          ? <>{initialSongs.length} song{initialSongs.length !== 1 ? 's' : ''}{hasFilters ? ` · ${filtered.length} shown` : ''}</>
+          : activeTab === 'collections'
+            ? <>{initialCollections.length} collection{initialCollections.length !== 1 ? 's' : ''}</>
+            : <>{initialTrainingResources.length} vocal training resource{initialTrainingResources.length !== 1 ? 's' : ''}</>}
         actions={activeTab === 'songs' ? <>
           <Link href="/quick-add" className="button-secondary"><Icon name="music" size={16} />Quick add</Link>
           <Link href="/library/new" className="button-primary"><Icon name="plus" size={17} />Add song</Link>
@@ -72,6 +81,7 @@ export default function SongLibraryClient({
         {([
           ['songs', 'Songs', initialSongs.length],
           ['collections', 'Collections', initialCollections.length],
+          ['vocal-training', 'Vocal training', initialTrainingResources.length],
         ] as const).map(([value, label, count]) => (
           <button
             key={value}
@@ -86,6 +96,10 @@ export default function SongLibraryClient({
 
       {activeTab === 'collections' && (
         <CollectionsClient collections={initialCollections} librarySongs={initialSongs} />
+      )}
+
+      {activeTab === 'vocal-training' && (
+        <VocalTrainingClient resources={initialTrainingResources} setupError={trainingResourcesError} />
       )}
 
       {activeTab === 'songs' && (
