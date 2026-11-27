@@ -64,17 +64,18 @@ export default function LogClient({ initialLogs }: { initialLogs: ServiceLog[] }
         {pendingReviews.map((log) => <ReviewBanner key={log.id} log={log} onDone={() => router.refresh()} />)}
       </section>}
 
-      <div className="mb-4 flex gap-5 overflow-x-auto border-b border-slate-200 dark:border-slate-800">
-        {['', ...SERVICE_MOMENTS].map((moment) => (
-          <button key={moment || 'all'} onClick={() => setFilterTag(filterTag === moment ? '' : moment)} aria-pressed={filterTag === moment} className={`-mb-px min-h-10 shrink-0 border-b-2 px-0.5 text-sm transition-colors ${filterTag === moment ? 'border-violet-800 font-medium text-violet-900 dark:border-violet-300 dark:text-violet-200' : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'}`}>
-            {moment || 'All services'}
-          </button>
-        ))}
-      </div>
-
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <button onClick={() => setShowFilters((value) => !value)} aria-expanded={showFilters} className="button-secondary self-start"><Icon name="filter" size={16} />{showFilters ? 'Hide filters' : 'Search and filter'}{hasFilters && <span className="ml-1 text-violet-800 dark:text-violet-300">· Active</span>}</button>
-        {hasFilters && <button onClick={clearFilters} className="button-quiet self-start sm:self-auto">Clear filters</button>}
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <label className="block w-full text-xs font-medium text-slate-500 dark:text-slate-400 sm:max-w-xs">
+          Service type
+          <select value={filterTag} onChange={(event) => setFilterTag(event.target.value)} className="field-control mt-1">
+            <option value="">All services</option>
+            {SERVICE_MOMENTS.map((moment) => <option key={moment} value={moment}>{moment}</option>)}
+          </select>
+        </label>
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={() => setShowFilters((value) => !value)} aria-expanded={showFilters} className="button-secondary self-start"><Icon name="filter" size={16} />{showFilters ? 'Hide filters' : 'Search and filter'}{hasFilters && <span className="ml-1 text-violet-800 dark:text-violet-300">· Active</span>}</button>
+          {hasFilters && <button onClick={clearFilters} className="button-quiet self-start">Clear filters</button>}
+        </div>
       </div>
 
       {showFilters && <div className="mb-5 grid gap-3 border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 sm:grid-cols-2 lg:grid-cols-5">

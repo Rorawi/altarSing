@@ -35,6 +35,7 @@ export default function VoiceRehearsalProjectClient({
 }) {
   const router = useRouter();
   const [loginOpen, setLoginOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [loginPending, setLoginPending] = useState(false);
@@ -46,6 +47,13 @@ export default function VoiceRehearsalProjectClient({
   const [sectionToDelete, setSectionToDelete] = useState<VoiceRehearsalSection | null>(null);
 
   useEffect(() => () => closeSharedVoiceAudioContext(), []);
+
+  function closeAdminLogin() {
+    setLoginOpen(false);
+    setShowPassword(false);
+    setPassword('');
+    setLoginError('');
+  }
 
   async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -60,6 +68,7 @@ export default function VoiceRehearsalProjectClient({
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? 'Could not sign in.');
       setLoginOpen(false);
+      setShowPassword(false);
       setPassword('');
       router.refresh();
     } catch (error) {
@@ -173,7 +182,7 @@ export default function VoiceRehearsalProjectClient({
         </div>
         {isAdmin ? (
           <DeleteVoiceRehearsalButton projectId={project.id} title={project.title} redirectTo="/voice-rehearsal" />
-        ) : adminConfigured ? <button type="button" onClick={() => setLoginOpen(true)} className="button-secondary shrink-0">Admin access</button> : null}
+        ) : adminConfigured ? <button type="button" onClick={() => { setLoginOpen(true); setPassword(''); setShowPassword(false); setLoginError(''); }} className="button-secondary shrink-0">Admin access</button> : null}
       </header>
 
       {isAdmin && takes.length > 0 && <VoiceRehearsalShare project={project} takes={takes} sections={sections} />}
@@ -289,17 +298,22 @@ export default function VoiceRehearsalProjectClient({
       )}
 
       {loginOpen && (
-        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/45 p-0 sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setLoginOpen(false); }}>
+        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/45 p-0 sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) closeAdminLogin(); }}>
           <form onSubmit={handleLogin} className="w-full max-w-md border border-slate-200 bg-[#fbfaf7] p-5 shadow-xl dark:border-slate-700 dark:bg-slate-900 sm:rounded-md">
             <h2 className="font-serif text-xl font-semibold text-slate-900 dark:text-white">Admin access</h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Enter the passphrase to record and manage parts.</p>
-            <label className="mt-5 block text-xs font-medium text-slate-600 dark:text-slate-400">
-              Admin passphrase
-              <input type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter admin passphrase" className="field-control mt-1" />
-            </label>
+            <div className="mt-5">
+              <label htmlFor="project-admin-passphrase" className="block text-xs font-medium text-slate-600 dark:text-slate-400">Admin passphrase</label>
+              <div className="relative mt-1">
+                <input id="project-admin-passphrase" type={showPassword ? 'text' : 'password'} autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter admin passphrase" className="field-control pr-12" />
+                <button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Hide passphrase' : 'Show passphrase'} aria-pressed={showPassword} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100">
+                  <Icon name={showPassword ? 'eye-off' : 'eye'} size={17} />
+                </button>
+              </div>
+            </div>
             {loginError && <p role="alert" className="mt-3 text-sm text-red-700 dark:text-red-300">{loginError}</p>}
             <div className="mt-5 flex justify-end gap-2">
-              <button type="button" onClick={() => setLoginOpen(false)} className="button-secondary">Cancel</button>
+              <button type="button" onClick={closeAdminLogin} className="button-secondary">Cancel</button>
               <button type="submit" disabled={loginPending || !password} className="button-primary">{loginPending ? 'Checking…' : 'Continue'}</button>
             </div>
           </form>

@@ -32,7 +32,9 @@ export type IconName =
   | 'lyrics'
   | 'microphone'
   | 'info'
-  | 'headphones';
+  | 'headphones'
+  | 'eye'
+  | 'eye-off';
 
 type IconProps = SVGProps<SVGSVGElement> & {
   name: IconName;
@@ -72,6 +74,8 @@ const paths: Record<IconName, ReactNode> = {
   microphone: <><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 10a7 7 0 0 0 14 0M12 17v5m-4 0h8" /></>,
   info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v5m0-8h.01" /></>,
   headphones: <><path d="M3 14v-3a9 9 0 0 1 18 0v3" /><path d="M5 14h2v6H5a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2Zm12 0h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2v-6Z" /></>,
+  eye: <><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></>,
+  'eye-off': <><path d="m3 3 18 18M10.6 10.6a2 2 0 0 0 2.8 2.8" /><path d="M9.9 5.2A11.3 11.3 0 0 1 12 5c6.5 0 10 7 10 7a14 14 0 0 1-3.1 3.8M6.2 6.2C3.5 8.1 2 12 2 12s3.5 7 10 7a10.8 10.8 0 0 0 3.2-.5" /></>,
 };
 
 export default function Icon({ name, size = 18, ...props }: IconProps) {

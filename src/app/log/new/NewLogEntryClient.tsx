@@ -35,6 +35,7 @@ export default function NewLogEntryClient({ songs }: { songs: SongOption[] }) {
   const [songEntries, setSongEntries] = useState<SongEntry[]>([
     { uid: generateUid(), songId: '', title: '', key: '', tags: [] },
   ]);
+  const [openTagsFor, setOpenTagsFor] = useState<string | null>(null);
   const [leaders, setLeaders] = useState<string[]>(['']);
   const today = new Date().toISOString().split('T')[0];
 
@@ -152,7 +153,7 @@ export default function NewLogEntryClient({ songs }: { songs: SongOption[] }) {
                       <button type="button" onClick={() => removeSong(entry.uid)} className="icon-button h-8 w-8 shrink-0" title="Remove song" aria-label="Remove song"><Icon name="close" size={15} /></button>
                     )}
                   </div>
-                  <div className="flex gap-2 pl-7">
+                  <div className="mt-4 flex gap-4 pl-7">
                     <input type="text" value={entry.title} onChange={(e) => updateSong(entry.uid, 'title', e.target.value)} placeholder="Song title…"
                       className="field-control flex-1" />
                     <select value={entry.key} onChange={(e) => updateSong(entry.uid, 'key', e.target.value)}
@@ -161,25 +162,44 @@ export default function NewLogEntryClient({ songs }: { songs: SongOption[] }) {
                       {MUSICAL_KEYS.map((k) => <option key={k} value={k}>{k}</option>)}
                     </select>
                   </div>
-                  {/* Per-song tags */}
-                  <div className="pl-7">
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-1">Tags</p>
-                    <div className="flex gap-1.5 flex-wrap">
-                      {SERVICE_MOMENTS.map((tag) => (
-                        <button
-                          key={tag}
-                          type="button"
-                          onClick={() => toggleSongTag(entry.uid, tag)}
-                          className={`min-h-8 rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
-                            entry.tags.includes(tag)
-                              ? 'border-violet-800 bg-violet-50 text-violet-950 dark:border-violet-400 dark:bg-violet-950/40 dark:text-violet-100'
-                              : 'border-slate-300 bg-white text-slate-600 hover:border-violet-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
-                          }`}
-                        >
-                          {tag}
-                        </button>
-                      ))}
+                  {/* Optional per-song tags stay tucked away until needed. */}
+                  <div className="pl-7 pt-4">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <button
+                        type="button"
+                        aria-expanded={openTagsFor === entry.uid}
+                        aria-controls={`song-tags-${entry.uid}`}
+                        onClick={() => setOpenTagsFor((current) => current === entry.uid ? null : entry.uid)}
+                        className="inline-flex min-h-8 shrink-0 items-center gap-1.5 text-xs font-medium text-slate-600 transition-colors hover:text-violet-900 dark:text-slate-300 dark:hover:text-violet-200"
+                      >
+                        Tags <span className="text-slate-400">({entry.tags.length})</span>
+                        <Icon name="chevron-down" size={14} className={`transition-transform ${openTagsFor === entry.uid ? 'rotate-180' : ''}`} />
+                      </button>
+                      {entry.tags.length > 0 && (
+                        <span className="min-w-0 truncate text-xs text-slate-500 dark:text-slate-400" title={entry.tags.join(', ')}>
+                          {entry.tags.slice(0, 2).join(' · ')}{entry.tags.length > 2 ? ` · +${entry.tags.length - 2}` : ''}
+                        </span>
+                      )}
                     </div>
+                    {openTagsFor === entry.uid && (
+                      <div id={`song-tags-${entry.uid}`} role="group" aria-label={`Tags for song ${i + 1}`} className="mt-2 flex flex-wrap gap-1.5">
+                        {SERVICE_MOMENTS.map((tag) => (
+                          <button
+                            key={tag}
+                            type="button"
+                            aria-pressed={entry.tags.includes(tag)}
+                            onClick={() => toggleSongTag(entry.uid, tag)}
+                            className={`min-h-8 rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
+                              entry.tags.includes(tag)
+                                ? 'border-violet-800 bg-violet-50 text-violet-950 dark:border-violet-400 dark:bg-violet-950/40 dark:text-violet-100'
+                                : 'border-slate-300 bg-white text-slate-600 hover:border-violet-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
+                            }`}
+                          >
+                            {tag}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
